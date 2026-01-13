@@ -16,7 +16,6 @@ case '$0' of
 end.
 ```
 
-
 ## OK
 
 ```erlang
