@@ -1,4 +1,5 @@
 use crate::item::Item;
+use crate::token::Token;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -27,20 +28,28 @@ pub enum Context {
 }
 
 #[derive(Debug)]
-pub struct Parser {
+pub struct Parser<'text> {
+    pub text: &'text str,
     pub contexts: Vec<Context>,
     pub items: Vec<Item>,
-    pub tokens: Vec<erl_tokenize::Token>,
+    pub tokens: Vec<Token>,
     pub token_i: usize,
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<erl_tokenize::Token>) -> Self {
+impl<'text> Parser<'text> {
+    pub fn new(text: &'text str, tokens: Vec<Token>) -> Self {
         Self {
             contexts: Vec::new(),
             items: Vec::new(),
+            text,
             tokens,
             token_i: 0,
         }
+    }
+
+    pub fn next_token(&mut self) -> Option<Token> {
+        let t = self.tokens.get(self.token_i).copied()?;
+        self.token_i += 01;
+        Some(t)
     }
 }

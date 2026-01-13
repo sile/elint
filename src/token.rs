@@ -8,6 +8,12 @@ pub struct Token {
     pub span: Span,
 }
 
+impl Token {
+    pub fn text(self, full_text: &str) -> &str {
+        self.span.text(full_text)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     Atom,

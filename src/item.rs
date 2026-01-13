@@ -18,3 +18,9 @@ pub struct Span {
     pub start: usize,
     pub end: usize,
 }
+
+impl Span {
+    pub fn text(self, full_text: &str) -> &str {
+        &full_text[self.start..self.end]
+    }
+}
