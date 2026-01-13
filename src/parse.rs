@@ -47,6 +47,10 @@ impl<'text> Parser<'text> {
         Some(t)
     }
 
+    pub fn context(&self) -> Option<Context> {
+        self.contexts.last().copied()
+    }
+
     pub fn with_context<F, T>(&mut self, context: Context, f: F) -> T
     where
         F: Fn(&mut Self) -> T,
