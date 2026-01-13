@@ -1,0 +1,9 @@
+[package]
+name = "elint"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+erl_tokenize = "0.10.0"
+noargs = "0.4.2"
+orfail = "2.0.0"
