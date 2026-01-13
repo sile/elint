@@ -1,8 +1,10 @@
+use crate::parse::Context;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Item {
+    pub ctx: Context,
     pub kind: ItemKind,
     pub span: Span,
-    pub size: std::num::NonZeroUsize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
