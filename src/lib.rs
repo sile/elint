@@ -1,4 +1,4 @@
-pub fn parse_code(text: &str) -> Result<Module-, ParseError> {
+pub fn parse_code(text: &str) -> Result<Module, ParseError> {
     todo!()
 }
 
