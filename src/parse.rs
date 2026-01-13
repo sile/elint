@@ -1,26 +1,20 @@
-use crate::item::Item;
+use crate::item::{Item, Span};
 use crate::token::Token;
 
 #[derive(Debug)]
-pub enum ParseError {
-    Tokenize(erl_tokenize::Error), // TODO: remove
+pub struct ParseError {
+    pub span: Span,
 }
 
 impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::Tokenize(e) => write!(f, "Tokenization error: {}", e),
-        }
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
 
-impl std::error::Error for ParseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ParseError::Tokenize(e) => Some(e),
-        }
-    }
-}
+impl std::error::Error for ParseError {}
+
+pub type ParseResult = Result<(), ParseError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Context {
@@ -51,5 +45,15 @@ impl<'text> Parser<'text> {
         let t = self.tokens.get(self.token_i).copied()?;
         self.token_i += 01;
         Some(t)
+    }
+
+    pub fn with_context<F, T>(&mut self, context: Context, f: F) -> T
+    where
+        F: Fn(&mut Self) -> T,
+    {
+        self.contexts.push(context);
+        let result = f(self);
+        self.contexts.pop();
+        result
     }
 }
