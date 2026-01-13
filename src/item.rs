@@ -2,6 +2,7 @@
 pub struct Item {
     pub kind: ItemKind,
     pub span: Span,
+    pub size: std::num::NonZeroUsize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -9,6 +10,7 @@ pub enum ItemKind {
     Variable,
     Atom,
     Integer,
+    Comment,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
