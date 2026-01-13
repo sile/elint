@@ -11,13 +11,17 @@ fn main() -> noargs::Result<()> {
 
     noargs::HELP_FLAG.take_help(&mut args);
 
-    let name: String = noargs::arg("NAME")
+    let path: std::path::PathBuf = noargs::arg("PATH")
         .take(&mut args)
         .then(|a| a.value().parse())?;
 
-    args.finish()?;
+    if let Some(help) = args.finish()? {
+        print!("{help}");
+        return Ok(());
+    }
 
-    println!("Hello, {}", name);
+    let code = std::fs::read_to_string(&path)?;
+    elint::parse_code(&code)?;
 
     Ok(())
 }
