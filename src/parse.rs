@@ -54,6 +54,23 @@ impl<'text> Parser<'text> {
         }
     }
 
+    pub fn last_span(&self) -> Span {
+        if let Some(t) = self.token_i.checked_sub(1).and_then(|i| self.tokens.get(i)) {
+            t.span
+        } else {
+            Span { start: 0, end: 0 }
+        }
+    }
+
+    pub fn next_span(&self) -> Span {
+        if let Some(t) = self.tokens.get(self.token_i) {
+            t.span
+        } else {
+            let n = self.text.len();
+            Span { start: n, end: n }
+        }
+    }
+
     pub fn next_token(&mut self) -> Option<Token> {
         let t = self.tokens.get(self.token_i).copied()?;
         self.token_i += 1;
@@ -81,10 +98,21 @@ impl<'text> Parser<'text> {
 
     pub fn parse_item<F>(&mut self, f: F) -> ParseResult
     where
-        F: Fn() -> ParseResult<ItemKind>,
+        F: Fn(&mut Self) -> ParseResult<ItemKind>,
     {
+        let i = self.items.len();
         let ctx = self.context()?;
-        todo!()
+        let start = self.next_span().start;
+        let kind = f(self)?;
+        let end = self.last_span().end;
+
+        // TODO: negative span check
+
+        let span = Span { start, end };
+        let item = Item { ctx, kind, span };
+        self.items.insert(i, item);
+
+        Ok(())
     }
 
     pub fn with_context<F, T>(&mut self, context: Context, f: F) -> T
