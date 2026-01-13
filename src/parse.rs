@@ -2,7 +2,7 @@ use crate::item::Item;
 
 #[derive(Debug)]
 pub enum ParseError {
-    Tokenize(erl_tokenize::Error),
+    Tokenize(erl_tokenize::Error), // TODO: remove
 }
 
 impl std::fmt::Display for ParseError {
@@ -22,22 +22,22 @@ impl std::error::Error for ParseError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParseContext {
+pub enum Context {
     Expr,
 }
 
 #[derive(Debug)]
 pub struct Parser {
-    pub ctx: ParseContext,
+    pub contexts: Vec<Context>,
     pub items: Vec<Item>,
     pub tokens: Vec<erl_tokenize::Token>,
     pub token_i: usize,
 }
 
 impl Parser {
-    pub fn new(ctx: ParseContext, tokens: Vec<erl_tokenize::Token>) -> Self {
+    pub fn new(tokens: Vec<erl_tokenize::Token>) -> Self {
         Self {
-            ctx,
+            contexts: Vec::new(),
             items: Vec::new(),
             tokens,
             token_i: 0,
