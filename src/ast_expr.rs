@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
-    pub position: Position,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -12,7 +12,7 @@ pub enum ExprKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Position {
+pub struct Span {
     pub start: usize,
     pub end: usize,
 }
