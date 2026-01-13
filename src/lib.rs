@@ -1,3 +1,5 @@
+pub mod ast_expr;
+
 pub fn parse_code(text: &str) -> Result<Module, ParseError> {
     let lexer = erl_tokenize::Lexer::new(text);
 
