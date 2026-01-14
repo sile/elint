@@ -179,7 +179,7 @@ impl<'text> Parser<'text> {
     fn parse_binary_op_item(&mut self) -> ParseResult<ItemKind> {
         let ctx = self.context()?;
         let t = self.token()?;
-        if t.is_binary_op(ctx, self.text) {
+        if !t.is_binary_op(ctx, self.text) {
             todo!()
         }
         Ok(ItemKind::BinaryOp)
@@ -249,5 +249,32 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].kind, ItemKind::Integer);
         assert_eq!(items[0].text(input), "42");
+    }
+
+    #[test]
+    fn parse_binary_op_exprs() {
+        let input = "1 + 2 * 3";
+        let items = parse(input).expect("parse failed");
+
+        // Should have: BinaryOpExprs wrapper, Integer(1), BinaryOp(+), Integer(2)
+        assert!(
+            items
+                .iter()
+                .any(|item| item.kind == ItemKind::BinaryOpExprs)
+        );
+        assert_eq!(
+            items
+                .iter()
+                .filter(|item| item.kind == ItemKind::Integer)
+                .count(),
+            2
+        );
+        assert_eq!(
+            items
+                .iter()
+                .filter(|item| item.kind == ItemKind::BinaryOp)
+                .count(),
+            1
+        );
     }
 }
