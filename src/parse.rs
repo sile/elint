@@ -187,6 +187,11 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
+        // TODO: add handling of conpound expr such as fun call or record access
+        self.parse_base_expr_item()
+    }
+
+    fn parse_base_expr_item(&mut self) -> ParseResult<ItemKind> {
         let t = self.token()?;
         match t.kind {
             TokenKind::Comment => panic!("bug"),
