@@ -187,8 +187,17 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
-        // TODO: add handling of conpound expr such as fun call or record access
-        self.parse_base_expr_item()
+        let expr_kind = self.parse_base_expr_item()?;
+        if self.is_next_symbol(":") {
+            todo!()
+        } else {
+            Ok(expr_kind)
+        }
+    }
+
+    fn is_next_symbol(&self, name: &str) -> bool {
+        self.peek_token()
+            .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
     }
 
     fn parse_base_expr_item(&mut self) -> ParseResult<ItemKind> {
