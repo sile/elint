@@ -39,7 +39,7 @@ impl Span {
     }
 
     pub fn items(self, items: &[Item]) -> &[Item] {
-        assert!(items.is_empty());
+        assert!(!items.is_empty());
         assert_eq!(self, items[0].span);
 
         let mut n = items
@@ -56,8 +56,7 @@ impl Span {
 
 #[derive(Debug, Clone)]
 pub struct BinaryOpExprsView<'a> {
-    items: &'a [Item],
-    i: usize,
+    children: &'a [Item],
 }
 
 impl<'a> BinaryOpExprsView<'a> {
@@ -66,8 +65,9 @@ impl<'a> BinaryOpExprsView<'a> {
         if t.kind != ItemKind::BinaryOpExprs {
             return None;
         }
-        let items = t.span.items(items);
-        Some(Self { items, i: 1 })
+
+        let children = &t.span.items(items)[1..];
+        Some(Self { children })
     }
 }
 
@@ -75,9 +75,9 @@ impl<'a> Iterator for BinaryOpExprsView<'a> {
     type Item = &'a [Item];
 
     fn next(&mut self) -> Option<Self::Item> {
-        let t = self.items.get(self.i)?;
-        let child_items = t.span.items(self.items);
-        self.i += child_items.len();
-        Some(child_items)
+        let t = self.children.first()?;
+        let child = t.span.items(self.children);
+        self.children = &self.children[child.len()..];
+        Some(child)
     }
 }
