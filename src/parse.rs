@@ -275,5 +275,8 @@ mod tests {
 
         assert_eq!(items[5].kind, ItemKind::Integer);
         assert_eq!(items[5].text(input), "3");
+
+        let view = crate::item::BinaryOpExprsView::new(&items).expect("bug");
+        assert_eq!(view.count(), 5);
     }
 }

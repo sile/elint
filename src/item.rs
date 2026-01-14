@@ -63,11 +63,11 @@ pub struct BinaryOpExprsView<'a> {
 impl<'a> BinaryOpExprsView<'a> {
     pub fn new(items: &'a [Item]) -> Option<Self> {
         let t = items.first()?;
-        (t.kind == ItemKind::BinaryOpExprs).then_some(Self { items, i: 1 })
-    }
-
-    fn span_end(&self) -> usize {
-        self.items[0].span.end
+        if t.kind != ItemKind::BinaryOpExprs {
+            return None;
+        }
+        let items = t.span.items(items);
+        Some(Self { items, i: 1 })
     }
 }
 
@@ -76,10 +76,6 @@ impl<'a> Iterator for BinaryOpExprsView<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let t = self.items.get(self.i)?;
-        if self.span_end() <= t.span.start {
-            return None;
-        }
-
         let child_items = t.span.items(self.items);
         self.i += child_items.len();
         Some(child_items)
