@@ -1,6 +1,7 @@
 use erl_tokenize::PositionRange;
 
 use crate::item::Span;
+use crate::parse::Context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Token {
@@ -11,6 +12,16 @@ pub struct Token {
 impl Token {
     pub fn text(self, full_text: &str) -> &str {
         self.span.text(full_text)
+    }
+
+    pub fn is_binary_op(self, _ctx: Context, text: &str) -> bool {
+        if !matches!(self.kind, TokenKind::Keyword | TokenKind::Symbol) {
+            return false;
+        }
+
+        // TODO: consider context
+        // TODO: add other kw / symbol
+        matches!(self.text(text), "*" | "+" | "-" | "orelse" | "andalso")
     }
 }
 

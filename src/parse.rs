@@ -150,7 +150,18 @@ impl<'text> Parser<'text> {
     }
 
     pub fn parse_expr(&mut self) -> ParseResult<()> {
-        self.with_context(Context::Expr, |p| p.parse_item(|p| p.parse_expr_item()))
+        let ctx = Context::Expr;
+        self.with_context(ctx, |p| {
+            let i = p.items.len();
+            p.parse_item(|p| p.parse_expr_item())?;
+            if let Some(t) = p.peek_token()
+                && t.is_binary_op(ctx, p.text)
+            {
+                p.parse_item(|p| p.parse_expr_item())?;
+                // todo: insert binary op expr
+            }
+            Ok(())
+        })
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
