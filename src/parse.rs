@@ -144,4 +144,20 @@ impl<'text> Parser<'text> {
             .expect("bug");
         }
     }
+
+    pub fn parse_expr(&mut self) -> ParseResult<()> {
+        self.with_context(Context::Expr, |p| {
+            p.parse_comments();
+            p.parse_item(|p| p.parse_expr_item())?;
+            p.parse_comments();
+            Ok(())
+        })
+    }
+
+    fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
+        let t = self.token()?;
+        match t.kind {
+            _ => todo!(),
+        }
+    }
 }
