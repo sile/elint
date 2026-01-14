@@ -1,5 +1,5 @@
 use crate::item::{Item, ItemKind, Span};
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -77,6 +77,10 @@ impl<'text> Parser<'text> {
         Some(t)
     }
 
+    pub fn peek_token(&self) -> Option<Token> {
+        self.tokens.get(self.token_i).copied()
+    }
+
     pub fn token(&self) -> ParseResult<Token> {
         if let Some(token) = self.tokens.get(self.token_i).copied() {
             Ok(token)
@@ -85,6 +89,10 @@ impl<'text> Parser<'text> {
             let span = Span { start: n, end: n };
             Err(ParseError::new(span, "unexpected EOF"))
         }
+    }
+
+    pub fn is_eof(&self) -> bool {
+        self.token_i == self.tokens.len()
     }
 
     pub fn context(&self) -> ParseResult<Context> {
@@ -123,5 +131,17 @@ impl<'text> Parser<'text> {
         let result = f(self);
         self.contexts.pop();
         result
+    }
+
+    pub fn parse_comments(&mut self) {
+        while let Some(t) = self.peek_token()
+            && t.kind == TokenKind::Comment
+        {
+            self.parse_item(|p| {
+                let _ = p.next_token();
+                Ok(ItemKind::Comment)
+            })
+            .expect("bug");
+        }
     }
 }
