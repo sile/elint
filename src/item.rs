@@ -7,6 +7,12 @@ pub struct Item {
     pub span: Span,
 }
 
+impl Item {
+    pub fn text(self, full_text: &str) -> &str {
+        self.span.text(full_text)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemKind {
     Variable,
