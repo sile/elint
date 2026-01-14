@@ -37,6 +37,21 @@ impl Span {
     pub fn text(self, full_text: &str) -> &str {
         &full_text[self.start..self.end]
     }
+
+    pub fn items(self, items: &[Item]) -> &[Item] {
+        assert!(items.is_empty());
+        assert_eq!(self, items[0].span);
+
+        let mut n = items
+            .binary_search_by_key(&self.end, |t| t.span.start)
+            .unwrap_or_else(|i| i);
+        n -= items[..n]
+            .iter()
+            .rev()
+            .take_while(|t| t.span.start == self.end)
+            .count();
+        &items[..n]
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +80,8 @@ impl<'a> Iterator for BinaryOpExprsView<'a> {
             return None;
         }
 
-        todo!()
+        let child_items = t.span.items(self.items);
+        self.i += child_items.len();
+        Some(child_items)
     }
 }
