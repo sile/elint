@@ -184,8 +184,10 @@ mod tests {
 
     #[test]
     fn parse_integers() {
-        let items = parse("42").expect("parse failed");
+        let input = " 42 ";
+        let items = parse(input).expect("parse failed");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].kind, ItemKind::Integer);
+        assert_eq!(items[0].text(input), "42");
     }
 }
