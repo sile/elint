@@ -108,6 +108,8 @@ impl<'text> Parser<'text> {
     where
         F: Fn(&mut Self) -> ParseResult<ItemKind>,
     {
+        self.parse_comments()?;
+
         let i = self.items.len();
         let ctx = self.context()?;
         let start = self.next_span().start;
@@ -120,6 +122,7 @@ impl<'text> Parser<'text> {
         let item = Item { ctx, kind, span };
         self.items.insert(i, item);
 
+        self.parse_comments()?;
         Ok(())
     }
 
@@ -133,25 +136,21 @@ impl<'text> Parser<'text> {
         result
     }
 
-    pub fn parse_comments(&mut self) {
+    pub fn parse_comments(&mut self) -> ParseResult<()> {
+        let ctx = self.context()?;
         while let Some(t) = self.peek_token()
             && t.kind == TokenKind::Comment
         {
-            self.parse_item(|p| {
-                let _ = p.next_token();
-                Ok(ItemKind::Comment)
-            })
-            .expect("bug");
+            let kind = ItemKind::Comment;
+            let span = t.span;
+            let item = Item { ctx, kind, span };
+            self.items.push(item);
         }
+        Ok(())
     }
 
     pub fn parse_expr(&mut self) -> ParseResult<()> {
-        self.with_context(Context::Expr, |p| {
-            p.parse_comments();
-            p.parse_item(|p| p.parse_expr_item())?;
-            p.parse_comments();
-            Ok(())
-        })
+        self.with_context(Context::Expr, |p| p.parse_item(|p| p.parse_expr_item()))
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
