@@ -161,7 +161,35 @@ impl<'text> Parser<'text> {
                 self.next_token();
                 Ok(ItemKind::Integer)
             }
-            _ => todo!(),
+            TokenKind::Atom => {
+                self.next_token();
+                Ok(ItemKind::Atom)
+            }
+            TokenKind::Variable => {
+                self.next_token();
+                Ok(ItemKind::Variable)
+            }
+            TokenKind::Float => {
+                self.next_token();
+                Ok(ItemKind::Float)
+            }
+            TokenKind::Char => {
+                self.next_token();
+                Ok(ItemKind::Char)
+            }
+            TokenKind::String => {
+                self.next_token();
+                Ok(ItemKind::String)
+            }
+            TokenKind::SigilString => {
+                self.next_token();
+                Ok(ItemKind::SigilString)
+            }
+            TokenKind::Keyword | TokenKind::Symbol => {
+                self.next_token();
+                // Handle as appropriate for your grammar
+                todo!("Define handling for Keyword and Symbol tokens")
+            }
         }
     }
 }

@@ -18,6 +18,10 @@ pub enum ItemKind {
     Variable,
     Atom,
     Integer,
+    Float,
+    Char,
+    String,
+    SigilString,
     Comment,
 }
 
