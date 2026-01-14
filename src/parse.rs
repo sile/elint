@@ -182,6 +182,7 @@ impl<'text> Parser<'text> {
         if !t.is_binary_op(ctx, self.text) {
             todo!()
         }
+        self.next_token();
         Ok(ItemKind::BinaryOp)
     }
 
@@ -255,26 +256,24 @@ mod tests {
     fn parse_binary_op_exprs() {
         let input = "1 + 2 * 3";
         let items = parse(input).expect("parse failed");
+        assert_eq!(items.len(), 6);
 
-        // Should have: BinaryOpExprs wrapper, Integer(1), BinaryOp(+), Integer(2)
-        assert!(
-            items
-                .iter()
-                .any(|item| item.kind == ItemKind::BinaryOpExprs)
-        );
-        assert_eq!(
-            items
-                .iter()
-                .filter(|item| item.kind == ItemKind::Integer)
-                .count(),
-            2
-        );
-        assert_eq!(
-            items
-                .iter()
-                .filter(|item| item.kind == ItemKind::BinaryOp)
-                .count(),
-            1
-        );
+        assert_eq!(items[0].kind, ItemKind::BinaryOpExprs);
+        assert_eq!(items[0].text(input), input);
+
+        assert_eq!(items[1].kind, ItemKind::Integer);
+        assert_eq!(items[1].text(input), "1");
+
+        assert_eq!(items[2].kind, ItemKind::BinaryOp);
+        assert_eq!(items[2].text(input), "+");
+
+        assert_eq!(items[3].kind, ItemKind::Integer);
+        assert_eq!(items[3].text(input), "2");
+
+        assert_eq!(items[4].kind, ItemKind::BinaryOp);
+        assert_eq!(items[4].text(input), "*");
+
+        assert_eq!(items[5].kind, ItemKind::Integer);
+        assert_eq!(items[5].text(input), "3");
     }
 }
