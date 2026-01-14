@@ -23,6 +23,8 @@ pub enum ItemKind {
     String,
     SigilString,
     Comment,
+    BinaryOp,
+    BinaryOpExprs,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

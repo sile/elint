@@ -154,14 +154,35 @@ impl<'text> Parser<'text> {
         self.with_context(ctx, |p| {
             let i = p.items.len();
             p.parse_item(|p| p.parse_expr_item())?;
-            if let Some(t) = p.peek_token()
+
+            let mut has_binary_op = false;
+            while let Some(t) = p.peek_token()
                 && t.is_binary_op(ctx, p.text)
             {
+                p.parse_item(|p| p.parse_binary_op_item())?;
                 p.parse_item(|p| p.parse_expr_item())?;
-                // todo: insert binary op expr
+                has_binary_op = true;
             }
+            if has_binary_op {
+                let kind = ItemKind::BinaryOpExprs;
+                let start = p.items[i].span.start;
+                let end = p.last_span().end;
+                let span = Span { start, end };
+                let item = Item { ctx, kind, span };
+                p.items.insert(i, item);
+            }
+
             Ok(())
         })
+    }
+
+    fn parse_binary_op_item(&mut self) -> ParseResult<ItemKind> {
+        let ctx = self.context()?;
+        let t = self.token()?;
+        if t.is_binary_op(ctx, self.text) {
+            todo!()
+        }
+        Ok(ItemKind::BinaryOp)
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
