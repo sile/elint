@@ -156,7 +156,36 @@ impl<'text> Parser<'text> {
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
         let t = self.token()?;
         match t.kind {
+            TokenKind::Comment => panic!("bug"),
+            TokenKind::Integer => {
+                self.next_token();
+                Ok(ItemKind::Integer)
+            }
             _ => todo!(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(text: &str) -> ParseResult<Vec<Item>> {
+        let tokens = crate::token::tokenize(text).expect("tokenization failed");
+        let mut parser = Parser::new(text, tokens);
+        parser.with_context(Context::Expr, |p| {
+            while !p.is_eof() {
+                p.parse_expr()?;
+            }
+            Ok(())
+        })?;
+        Ok(parser.items)
+    }
+
+    #[test]
+    fn parse_integers() {
+        let items = parse("42").expect("parse failed");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].kind, ItemKind::Integer);
     }
 }
