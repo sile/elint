@@ -216,6 +216,8 @@ impl<'text> Parser<'text> {
 mod tests {
     use super::*;
 
+    use crate::item::ItemView;
+
     fn parse(text: &str) -> ParseResult<Vec<Item>> {
         let tokens = crate::token::tokenize(text).expect("tokenization failed");
         let mut parser = Parser::new(text, tokens);
@@ -258,8 +260,9 @@ mod tests {
         assert_eq!(items[5].kind, ItemKind::Integer);
         assert_eq!(items[5].text(input), "3");
 
-        let view = crate::item::BinaryOpExprsView::new(&items).expect("bug");
-        assert_eq!(view.count(), 5);
+        let view = crate::item::BinaryOpExprs::new(ItemView::new(&items, 0)).expect("bug");
+        assert_eq!(view.exprs().count(), 3);
+        assert_eq!(view.ops().count(), 2);
     }
 
     #[test]
