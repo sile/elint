@@ -72,10 +72,10 @@ impl<'text> Parser<'text> {
         }
     }
 
-    pub fn next_token(&mut self) -> Option<Token> {
-        let t = self.tokens.get(self.token_i).copied()?;
+    pub fn next_token(&mut self) -> ParseResult<Token> {
+        let t = self.token()?;
         self.token_i += 1;
-        Some(t)
+        Ok(t)
     }
 
     pub fn peek_token(&self) -> Option<Token> {
@@ -122,29 +122,36 @@ impl<'text> Parser<'text> {
         while let Some(t) = self.peek_token()
             && t.is_binary_op(self.text)
         {
-            self.parse_item(|p| p.parse_binary_op_item())?;
+            let item = self.parse_binary_op_item()?;
+            self.items.push(item);
+
             self.parse_item(|p| p.parse_expr_item())?;
             has_binary_op = true;
         }
         if has_binary_op {
-            let kind = ItemKind::BinaryOpExprs;
             let start = self.items[i].span.start;
             let end = self.last_span().end;
-            let span = Span { start, end };
-            let item = Item { kind, span };
+            let item = Item::new(ItemKind::BinaryOpExprs, Span::new(start, end));
             self.items.insert(i, item);
         }
 
         Ok(())
     }
 
-    fn parse_binary_op_item(&mut self) -> ParseResult<ItemKind> {
-        let t = self.token()?;
+    fn position(&self) -> usize {
+        self.peek_token()
+            .map(|t| t.span.start)
+            .unwrap_or_else(|| self.text.len())
+    }
+
+    fn parse_binary_op_item(&mut self) -> ParseResult<Item> {
+        let start = self.position();
+        let t = self.next_token()?;
         if !t.is_binary_op(self.text) {
             return Err(ParseError::new(t.span, "expected binary operator"));
         }
-        self.next_token();
-        Ok(ItemKind::BinaryOp)
+        let end = self.position();
+        Ok(Item::new(ItemKind::BinaryOp, Span::new(start, end)))
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<ItemKind> {
@@ -166,35 +173,34 @@ impl<'text> Parser<'text> {
         match t.kind {
             TokenKind::Comment => panic!("bug"),
             TokenKind::Integer => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::Integer)
             }
             TokenKind::Atom => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::Atom)
             }
             TokenKind::Variable => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::Variable)
             }
             TokenKind::Float => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::Float)
             }
             TokenKind::Char => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::Char)
             }
             TokenKind::String => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::String)
             }
             TokenKind::SigilString => {
-                self.next_token();
+                self.next_token()?;
                 Ok(ItemKind::SigilString)
             }
             TokenKind::Keyword | TokenKind::Symbol => {
-                self.next_token();
                 // Handle as appropriate for your grammar
                 todo!("Define handling for Keyword and Symbol tokens")
             }
