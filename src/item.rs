@@ -1,3 +1,5 @@
+use crate::parse::{ParseError, ParseResult};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Item {
     pub kind: ItemKind,
@@ -116,6 +118,14 @@ impl<'a> ItemView<'a> {
         let end = self.parent().map_or(self.items.len(), |p| p.end_index());
         ItemsView::new(self.items, start, end)
     }
+
+    pub fn expect_kind(&self, kind: ItemKind) -> ParseResult {
+        if self.kind() == kind {
+            Ok(())
+        } else {
+            Err(ParseError::new(self.span(), format!("TODO")))
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -143,8 +153,25 @@ impl<'a> Iterator for ItemsView<'a> {
 }
 
 #[derive(Debug, Clone)]
+pub struct BinaryOpExprs<'a>(ItemsView<'a>);
+
+impl<'a> BinaryOpExprs<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::BinaryOpExprs)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn exprs(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0.clone().step_by(2)
+    }
+
+    pub fn ops(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0.clone().skip(1).step_by(2)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum TypedItem<'a> {
-    BinaryOpExprs(ItemsView<'a>),
     ModuleFunctionCall {
         module: ItemView<'a>,
         function: ItemView<'a>,
