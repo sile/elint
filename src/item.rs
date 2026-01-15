@@ -60,20 +60,26 @@ impl Span {
     }
 }
 
+fn get_span_and_children<'a>(items: &'a [Item], kind: ItemKind) -> Option<(Span, &'a [Item])> {
+    let t = items.first().filter(|t| t.kind == kind)?;
+    let children = &t.span.items(items)[1..];
+    Some((t.span, children))
+}
+
 #[derive(Debug, Clone)]
 pub struct BinaryOpExprsView<'a> {
+    span: Span,
     children: &'a [Item],
 }
 
 impl<'a> BinaryOpExprsView<'a> {
     pub fn new(items: &'a [Item]) -> Option<Self> {
-        let t = items.first()?;
-        if t.kind != ItemKind::BinaryOpExprs {
-            return None;
-        }
+        get_span_and_children(items, ItemKind::BinaryOpExprs)
+            .map(|(span, children)| Self { span, children })
+    }
 
-        let children = &t.span.items(items)[1..];
-        Some(Self { children })
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -85,5 +91,34 @@ impl<'a> Iterator for BinaryOpExprsView<'a> {
         let child = t.span.items(self.children);
         self.children = &self.children[child.len()..];
         Some(child)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ModuleFunctionCallView<'a> {
+    span: Span,
+    children: &'a [Item],
+}
+
+impl<'a> ModuleFunctionCallView<'a> {
+    pub fn new(items: &'a [Item]) -> Option<Self> {
+        get_span_and_children(items, ItemKind::ModuleFunctionCall)
+            .map(|(span, children)| Self { span, children })
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn module_name(&self) -> ExprView<'_> {
+        todo!()
+    }
+
+    pub fn function_name(&self) -> ExprView<'_> {
+        todo!()
+    }
+
+    pub fn args(&self) -> ExprsView<'_> {
+        todo!()
     }
 }
