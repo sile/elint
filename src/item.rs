@@ -93,6 +93,14 @@ impl<'a> ItemView2<'a> {
         self.span().items(&self.items[self.i..])
     }
 
+    pub fn start_index(&self) -> usize {
+        self.i
+    }
+
+    pub fn end_index(&self) -> usize {
+        self.i + self.items().len()
+    }
+
     pub fn parent(&self) -> Option<Self> {
         let span = self.span();
         for (i, item) in self.items[..self.i].iter().rev().enumerate() {
@@ -103,7 +111,41 @@ impl<'a> ItemView2<'a> {
         None
     }
 
-    // next_siblings, prev_siblings, children
+    pub fn children(&self) -> ItemsView2<'a> {
+        let start = self.i + 1;
+        let end = self.end_index();
+        ItemsView2::new(self.items, start, end)
+    }
+
+    pub fn siblings(&self) -> ItemsView2<'a> {
+        let start = self.start_index();
+        let end = self.parent().map_or(self.items.len(), |p| p.end_index());
+        ItemsView2::new(self.items, start, end)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemsView2<'a> {
+    items: &'a [Item],
+    start: usize,
+    end: usize,
+}
+
+impl<'a> ItemsView2<'a> {
+    fn new(items: &'a [Item], start: usize, end: usize) -> Self {
+        Self { items, start, end }
+    }
+}
+
+impl<'a> Iterator for ItemsView2<'a> {
+    type Item = ItemView2<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.start;
+        let next = self.items.get(i).filter(|_| i < self.end)?;
+        self.start += next.span.items(&self.items[i..]).len();
+        Some(ItemView2::new(self.items, i))
+    }
 }
 
 #[derive(Debug, Clone)]
