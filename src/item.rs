@@ -85,6 +85,10 @@ impl<'a> ItemView<'a> {
         self.items[self.i].span
     }
 
+    pub fn text<'b>(&self, text: &'b str) -> &'b str {
+        self.span().text(text)
+    }
+
     pub fn items(&self) -> &'a [Item] {
         self.span().items(&self.items[self.i..])
     }
@@ -153,9 +157,9 @@ impl<'a> Iterator for ItemsView<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct BinaryOpExprs<'a>(ItemsView<'a>);
+pub struct BinaryOpExprsView<'a>(ItemsView<'a>);
 
-impl<'a> BinaryOpExprs<'a> {
+impl<'a> BinaryOpExprsView<'a> {
     pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
         item.expect_kind(ItemKind::BinaryOpExprs)?;
         Ok(Self(item.children()))
@@ -171,10 +175,23 @@ impl<'a> BinaryOpExprs<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub enum TypedItem<'a> {
-    ModuleFunctionCall {
-        module: ItemView<'a>,
-        function: ItemView<'a>,
-        args: ItemsView<'a>,
-    },
+pub struct ModuleFunctionCallView<'a>(ItemsView<'a>);
+
+impl<'a> ModuleFunctionCallView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::ModuleFunctionCall)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn module_name(&self) -> ItemView<'a> {
+        self.0.clone().next().expect("bug")
+    }
+
+    pub fn function_name(&self) -> ItemView<'a> {
+        self.0.clone().nth(1).expect("bug")
+    }
+
+    pub fn args(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0.clone().skip(2)
+    }
 }

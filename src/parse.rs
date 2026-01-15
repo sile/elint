@@ -260,7 +260,7 @@ mod tests {
         assert_eq!(items[5].kind, ItemKind::Integer);
         assert_eq!(items[5].text(input), "3");
 
-        let view = crate::item::BinaryOpExprs::new(ItemView::new(&items, 0)).expect("bug");
+        let view = crate::item::BinaryOpExprsView::new(ItemView::new(&items, 0)).expect("bug");
         assert_eq!(view.exprs().count(), 3);
         assert_eq!(view.ops().count(), 2);
     }
@@ -277,5 +277,12 @@ mod tests {
         assert_eq!(items[1].text(input), "foo");
         assert_eq!(items[2].kind, ItemKind::Atom);
         assert_eq!(items[2].text(input), "bar");
+
+        let view = crate::item::ModuleFunctionCallView::new(ItemView::new(&items, 0)).expect("bug");
+        assert_eq!(view.module_name().kind(), ItemKind::Atom);
+        assert_eq!(view.module_name().text(input), "foo");
+        assert_eq!(view.function_name().kind(), ItemKind::Atom);
+        assert_eq!(view.function_name().text(input), "bar");
+        assert_eq!(view.args().count(), 0);
     }
 }
