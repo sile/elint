@@ -138,19 +138,23 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
-    fn position(&self) -> usize {
+    fn next_position(&self) -> usize {
         self.peek_token()
             .map(|t| t.span.start)
             .unwrap_or_else(|| self.text.len())
     }
 
+    fn last_position(&self) -> usize {
+        self.last_span().end
+    }
+
     fn parse_binary_op_item(&mut self) -> ParseResult<Item> {
-        let start = self.position();
+        let start = self.next_position();
         let t = self.next_token()?;
         if !t.is_binary_op(self.text) {
             return Err(ParseError::new(t.span, "expected binary operator"));
         }
-        let end = self.position();
+        let end = self.last_position();
         Ok(Item::new(ItemKind::BinaryOp, Span::new(start, end)))
     }
 
