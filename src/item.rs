@@ -85,49 +85,35 @@ impl<'a> ItemView<'a> {
     pub fn span(&self) -> Span {
         self.item.span
     }
+
+    pub fn children(&self) -> ItemsView<'a> {
+        ItemsView::new(self.children)
+    }
+
+    pub fn siblings(&self) -> ItemsView<'a> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct ExprsView<'a> {
-    span: Span,
-    children: &'a [Item],
-    position: usize,
+pub struct ItemsView<'a> {
+    items: &'a [Item],
 }
 
-impl<'a> ExprsView<'a> {
-    pub fn new(items: &'a [Item]) -> Option<Self> {
-        if items.is_empty() {
-            return None;
-        }
-        let t = items.first()?;
-        let span = Span::new(
-            t.span.start,
-            items.last().map(|i| i.span.end).unwrap_or(t.span.end),
-        );
-        Some(Self {
-            span,
-            children: items,
-            position: 0,
-        })
-    }
-
-    pub fn span(&self) -> Span {
-        self.span
+impl<'a> ItemsView<'a> {
+    pub fn new(items: &'a [Item]) -> Self {
+        Self { items }
     }
 }
 
-impl<'a> Iterator for ExprsView<'a> {
+impl<'a> Iterator for ItemsView<'a> {
     type Item = ItemView<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position >= self.children.len() {
-            return None;
-        }
-
-        let t = &self.children[self.position];
-        let child = t.span.items(self.children);
-        self.position += child.len();
-        ItemView::new(child)
+        let head = self.items.first()?;
+        let head_items = head.span.items(self.items);
+        self.items = &self.items[head_items.len()..];
+        ItemView::new(head_items)
     }
 }
 
@@ -175,30 +161,15 @@ impl<'a> ModuleFunctionCallView<'a> {
         self.span
     }
 
-    pub fn module_name(&self) -> Option<ItemView<'_>> {
-        ItemView::new(self.children)
+    pub fn module_name(&self) -> ItemView<'_> {
+        ItemView::new(self.children).expect("bug")
     }
 
-    pub fn function_name(&self) -> Option<ItemView<'_>> {
-        let module_name_span = self.module_name()?.span();
-        let remaining = &self.children[self
-            .children
-            .iter()
-            .position(|t| t.span.start >= module_name_span.end)?..];
-        ItemView::new(remaining)
+    pub fn function_name(&self) -> ItemView<'_> {
+        self.module_name().siblings().next().expect("bug")
     }
 
-    pub fn args(&self) -> Option<ExprsView<'_>> {
-        let fn_name_span = self.function_name()?.span();
-        let remaining = &self.children[self
-            .children
-            .iter()
-            .position(|t| t.span.start >= fn_name_span.end)?..];
-
-        if remaining.is_empty() {
-            return None;
-        }
-
-        ExprsView::new(remaining)
+    pub fn args(&self) -> ItemsView<'_> {
+        self.function_name().siblings()
     }
 }
