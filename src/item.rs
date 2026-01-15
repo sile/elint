@@ -67,6 +67,36 @@ fn get_span_and_children<'a>(items: &'a [Item], kind: ItemKind) -> Option<(Span,
 }
 
 #[derive(Debug, Clone)]
+pub struct ItemView2<'a> {
+    items: &'a [Item],
+    i: usize,
+}
+
+impl<'a> ItemView2<'a> {
+    pub fn new(items: &'a [Item], i: usize) -> Self {
+        Self { items, i }
+    }
+
+    pub fn kind(&self) -> ItemKind {
+        self.items[self.i].kind
+    }
+
+    pub fn span(&self) -> Span {
+        self.items[self.i].span
+    }
+
+    pub fn items(&self) -> &'a [Item] {
+        self.span().items(&self.items[self.i..])
+    }
+
+    pub fn parent(&self) -> Option<Self> {
+        todo!()
+    }
+
+    // ancestors, next_siblings, prev_siblings, children
+}
+
+#[derive(Debug, Clone)]
 pub struct ItemView<'a> {
     item: Item,
     children: &'a [Item],
