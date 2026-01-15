@@ -26,6 +26,7 @@ pub enum ItemKind {
     Comment,
     BinaryOp,
     BinaryOpExprs,
+    ModuleFunctionCall,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

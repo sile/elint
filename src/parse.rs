@@ -156,7 +156,7 @@ impl<'text> Parser<'text> {
         //let i = self.items.len();
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
-            //    self.parse_mfa_call(expr)
+            //    self.parse_module_fun_call_item(expr)
             todo!()
         } else {
             Ok(())
@@ -236,5 +236,15 @@ mod tests {
 
         let view = crate::item::BinaryOpExprsView::new(&items).expect("bug");
         assert_eq!(view.count(), 5);
+    }
+
+    #[test]
+    fn parse_module_function_call() {
+        let input = "foo:bar()";
+        let items = parse(input).expect("parse failed");
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].kind, ItemKind::ModuleFunctionCall);
+        assert_eq!(items[0].text(input), "foo:bar()");
     }
 }
