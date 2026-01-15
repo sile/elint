@@ -58,6 +58,10 @@ impl Span {
             .count();
         &items[..n]
     }
+
+    pub fn contains(self, other: Self) -> bool {
+        self.start <= other.start && other.end <= self.end
+    }
 }
 
 fn get_span_and_children<'a>(items: &'a [Item], kind: ItemKind) -> Option<(Span, &'a [Item])> {
@@ -90,10 +94,16 @@ impl<'a> ItemView2<'a> {
     }
 
     pub fn parent(&self) -> Option<Self> {
-        todo!()
+        let span = self.span();
+        for (i, item) in self.items[..self.i].iter().rev().enumerate() {
+            if item.span.contains(span) {
+                return Some(Self::new(self.items, self.i - i - 1));
+            }
+        }
+        None
     }
 
-    // ancestors, next_siblings, prev_siblings, children
+    // next_siblings, prev_siblings, children
 }
 
 #[derive(Debug, Clone)]
