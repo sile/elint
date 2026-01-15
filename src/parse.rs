@@ -114,20 +114,16 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
-    fn push_item(&mut self, item: Item) {
-        self.items.push(item);
-    }
-
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
-        self.parse_expr_item().map(|t| self.push_item(t))?;
+        self.parse_expr_item()?;
 
         let mut has_binary_op = false;
         while let Some(t) = self.peek_token()
             && t.is_binary_op(self.text)
         {
             self.parse_binary_op_item()?;
-            self.parse_expr_item().map(|t| self.push_item(t))?;
+            self.parse_expr_item()?;
             has_binary_op = true;
         }
         if has_binary_op {
@@ -139,7 +135,7 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
-    fn push_item2(&mut self, kind: ItemKind, span: Span) {
+    fn push_item(&mut self, kind: ItemKind, span: Span) {
         self.items.push(Item::new(kind, span));
     }
 
@@ -152,17 +148,18 @@ impl<'text> Parser<'text> {
         if !t.is_binary_op(self.text) {
             return Err(ParseError::new(t.span, "expected binary operator"));
         }
-        self.push_item2(ItemKind::BinaryOp, t.span);
+        self.push_item(ItemKind::BinaryOp, t.span);
         Ok(())
     }
 
-    fn parse_expr_item(&mut self) -> ParseResult<Item> {
-        let expr = self.parse_base_expr_item()?;
+    fn parse_expr_item(&mut self) -> ParseResult<()> {
+        //let i = self.items.len();
+        self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
             //    self.parse_mfa_call(expr)
             todo!()
         } else {
-            Ok(expr)
+            Ok(())
         }
     }
 
@@ -171,22 +168,23 @@ impl<'text> Parser<'text> {
             .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
     }
 
-    fn parse_base_expr_item(&mut self) -> ParseResult<Item> {
+    fn parse_base_expr_item(&mut self) -> ParseResult<()> {
         let t = self.next_token()?;
         match t.kind {
             TokenKind::Comment => panic!("bug"),
-            TokenKind::Integer => Ok(Item::new(ItemKind::Integer, t.span)),
-            TokenKind::Atom => Ok(Item::new(ItemKind::Atom, t.span)),
-            TokenKind::Variable => Ok(Item::new(ItemKind::Variable, t.span)),
-            TokenKind::Float => Ok(Item::new(ItemKind::Float, t.span)),
-            TokenKind::Char => Ok(Item::new(ItemKind::Char, t.span)),
-            TokenKind::String => Ok(Item::new(ItemKind::String, t.span)),
-            TokenKind::SigilString => Ok(Item::new(ItemKind::SigilString, t.span)),
+            TokenKind::Integer => self.push_item(ItemKind::Integer, t.span),
+            TokenKind::Atom => self.push_item(ItemKind::Atom, t.span),
+            TokenKind::Variable => self.push_item(ItemKind::Variable, t.span),
+            TokenKind::Float => self.push_item(ItemKind::Float, t.span),
+            TokenKind::Char => self.push_item(ItemKind::Char, t.span),
+            TokenKind::String => self.push_item(ItemKind::String, t.span),
+            TokenKind::SigilString => self.push_item(ItemKind::SigilString, t.span),
             TokenKind::Keyword | TokenKind::Symbol => {
                 // Handle as appropriate for your grammar
                 todo!("Define handling for Keyword and Symbol tokens")
             }
         }
+        Ok(())
     }
 }
 
