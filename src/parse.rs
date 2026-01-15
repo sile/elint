@@ -29,15 +29,9 @@ impl std::error::Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, ParseError>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Context {
-    Expr,
-}
-
 #[derive(Debug)]
 pub struct Parser<'text> {
     pub text: &'text str,
-    pub contexts: Vec<Context>,
     pub items: Vec<Item>,
     pub tokens: Vec<Token>,
     pub token_i: usize,
@@ -46,7 +40,6 @@ pub struct Parser<'text> {
 impl<'text> Parser<'text> {
     pub fn new(text: &'text str, tokens: Vec<Token>) -> Self {
         Self {
-            contexts: Vec::new(),
             items: Vec::new(),
             text,
             tokens,
@@ -95,15 +88,6 @@ impl<'text> Parser<'text> {
         self.token_i == self.tokens.len()
     }
 
-    pub fn context(&self) -> ParseResult<Context> {
-        if let Some(c) = self.contexts.last().copied() {
-            Ok(c)
-        } else {
-            let span = self.token()?.span;
-            Err(ParseError::new(span, "missing context"))
-        }
-    }
-
     pub fn parse_item<F>(&mut self, f: F) -> ParseResult
     where
         F: Fn(&mut Self) -> ParseResult<ItemKind>,
@@ -111,7 +95,6 @@ impl<'text> Parser<'text> {
         self.parse_comments()?;
 
         let i = self.items.len();
-        let ctx = self.context()?;
         let start = self.next_span().start;
         let kind = f(self)?;
         let end = self.last_span().end;
@@ -119,68 +102,61 @@ impl<'text> Parser<'text> {
         // TODO: negative span check
 
         let span = Span { start, end };
-        let item = Item { ctx, kind, span };
+        let item = Item { kind, span };
         self.items.insert(i, item);
 
         self.parse_comments()?;
         Ok(())
     }
 
-    pub fn with_context<F, T>(&mut self, context: Context, f: F) -> T
+    pub fn with_context<F, T>(&mut self, f: F) -> T
     where
         F: Fn(&mut Self) -> T,
     {
-        self.contexts.push(context);
-        let result = f(self);
-        self.contexts.pop();
-        result
+        f(self)
     }
 
     pub fn parse_comments(&mut self) -> ParseResult<()> {
-        let ctx = self.context()?;
         while let Some(t) = self.peek_token()
             && t.kind == TokenKind::Comment
         {
             let kind = ItemKind::Comment;
             let span = t.span;
-            let item = Item { ctx, kind, span };
+            let item = Item { kind, span };
             self.items.push(item);
+            self.next_token();
         }
         Ok(())
     }
 
     pub fn parse_expr(&mut self) -> ParseResult<()> {
-        let ctx = Context::Expr;
-        self.with_context(ctx, |p| {
-            let i = p.items.len();
-            p.parse_item(|p| p.parse_expr_item())?;
+        let i = self.items.len();
+        self.parse_item(|p| p.parse_expr_item())?;
 
-            let mut has_binary_op = false;
-            while let Some(t) = p.peek_token()
-                && t.is_binary_op(ctx, p.text)
-            {
-                p.parse_item(|p| p.parse_binary_op_item())?;
-                p.parse_item(|p| p.parse_expr_item())?;
-                has_binary_op = true;
-            }
-            if has_binary_op {
-                let kind = ItemKind::BinaryOpExprs;
-                let start = p.items[i].span.start;
-                let end = p.last_span().end;
-                let span = Span { start, end };
-                let item = Item { ctx, kind, span };
-                p.items.insert(i, item);
-            }
+        let mut has_binary_op = false;
+        while let Some(t) = self.peek_token()
+            && t.is_binary_op(self.text)
+        {
+            self.parse_item(|p| p.parse_binary_op_item())?;
+            self.parse_item(|p| p.parse_expr_item())?;
+            has_binary_op = true;
+        }
+        if has_binary_op {
+            let kind = ItemKind::BinaryOpExprs;
+            let start = self.items[i].span.start;
+            let end = self.last_span().end;
+            let span = Span { start, end };
+            let item = Item { kind, span };
+            self.items.insert(i, item);
+        }
 
-            Ok(())
-        })
+        Ok(())
     }
 
     fn parse_binary_op_item(&mut self) -> ParseResult<ItemKind> {
-        let ctx = self.context()?;
         let t = self.token()?;
-        if !t.is_binary_op(ctx, self.text) {
-            todo!()
+        if !t.is_binary_op(self.text) {
+            return Err(ParseError::new(t.span, "expected binary operator"));
         }
         self.next_token();
         Ok(ItemKind::BinaryOp)
@@ -248,7 +224,7 @@ mod tests {
     fn parse(text: &str) -> ParseResult<Vec<Item>> {
         let tokens = crate::token::tokenize(text).expect("tokenization failed");
         let mut parser = Parser::new(text, tokens);
-        parser.with_context(Context::Expr, |p| {
+        parser.with_context(|p| {
             while !p.is_eof() {
                 p.parse_expr()?;
             }

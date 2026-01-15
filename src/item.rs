@@ -1,8 +1,5 @@
-use crate::parse::Context;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Item {
-    pub ctx: Context,
     pub kind: ItemKind,
     pub span: Span,
 }
