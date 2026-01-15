@@ -109,13 +109,6 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
-    pub fn with_context<F, T>(&mut self, f: F) -> T
-    where
-        F: Fn(&mut Self) -> T,
-    {
-        f(self)
-    }
-
     pub fn parse_comments(&mut self) -> ParseResult<()> {
         while let Some(t) = self.peek_token()
             && t.kind == TokenKind::Comment
@@ -224,12 +217,9 @@ mod tests {
     fn parse(text: &str) -> ParseResult<Vec<Item>> {
         let tokens = crate::token::tokenize(text).expect("tokenization failed");
         let mut parser = Parser::new(text, tokens);
-        parser.with_context(|p| {
-            while !p.is_eof() {
-                p.parse_expr()?;
-            }
-            Ok(())
-        })?;
+        while !parser.is_eof() {
+            parser.parse_expr()?;
+        }
         Ok(parser.items)
     }
 
