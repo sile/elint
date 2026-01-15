@@ -166,6 +166,7 @@ impl<'text> Parser<'text> {
         let _ = self.next_token()?; // ':'
         self.parse_base_expr_item()?; // function name
         self.expect_symbol("(")?;
+        // todo: args
         let last = self.expect_symbol(")")?;
 
         let start = self.items[module_item_i].span.start;
@@ -266,8 +267,12 @@ mod tests {
         let input = "foo:bar()";
         let items = parse(input).expect("parse failed");
 
-        assert_eq!(items.len(), 1);
+        assert_eq!(items.len(), 3);
         assert_eq!(items[0].kind, ItemKind::ModuleFunctionCall);
         assert_eq!(items[0].text(input), "foo:bar()");
+        assert_eq!(items[1].kind, ItemKind::Atom);
+        assert_eq!(items[1].text(input), "foo");
+        assert_eq!(items[2].kind, ItemKind::Atom);
+        assert_eq!(items[2].text(input), "bar");
     }
 }
