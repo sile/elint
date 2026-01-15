@@ -126,31 +126,40 @@ impl<'text> Parser<'text> {
         while let Some(t) = self.peek_token()
             && t.is_binary_op(self.text)
         {
-            self.parse_binary_op_item().map(|t| self.push_item(t))?;
+            self.parse_binary_op_item()?;
             self.parse_expr_item().map(|t| self.push_item(t))?;
             has_binary_op = true;
         }
         if has_binary_op {
             let start = self.items[i].span.start;
             let end = self.last_span().end;
-            let item = Item::new(ItemKind::BinaryOpExprs, Span::new(start, end));
-            self.items.insert(i, item);
+            self.insert_item(i, ItemKind::BinaryOpExprs, Span::new(start, end));
         }
 
         Ok(())
     }
 
-    fn parse_binary_op_item(&mut self) -> ParseResult<Item> {
+    fn push_item2(&mut self, kind: ItemKind, span: Span) {
+        self.items.push(Item::new(kind, span));
+    }
+
+    fn insert_item(&mut self, i: usize, kind: ItemKind, span: Span) {
+        self.items.insert(i, Item::new(kind, span));
+    }
+
+    fn parse_binary_op_item(&mut self) -> ParseResult<()> {
         let t = self.next_token()?;
         if !t.is_binary_op(self.text) {
             return Err(ParseError::new(t.span, "expected binary operator"));
         }
-        Ok(Item::new(ItemKind::BinaryOp, t.span))
+        self.push_item2(ItemKind::BinaryOp, t.span);
+        Ok(())
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<Item> {
         let expr = self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
+            //    self.parse_mfa_call(expr)
             todo!()
         } else {
             Ok(expr)
