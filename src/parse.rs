@@ -153,13 +153,36 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_expr_item(&mut self) -> ParseResult<()> {
-        //let i = self.items.len();
+        let i = self.items.len();
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
-            //    self.parse_module_fun_call_item(expr)
-            todo!()
+            self.parse_module_function_call(i)
         } else {
             Ok(())
+        }
+    }
+
+    fn parse_module_function_call(&mut self, module_item_i: usize) -> ParseResult {
+        let _ = self.next_token()?; // ':'
+        self.parse_base_expr_item()?; // function name
+        self.expect_symbol("(")?;
+        let last = self.expect_symbol(")")?;
+
+        let start = self.items[module_item_i].span.start;
+        let span = Span::new(start, last.end);
+        self.insert_item(module_item_i, ItemKind::ModuleFunctionCall, span);
+        Ok(())
+    }
+
+    fn expect_symbol(&mut self, name: &str) -> ParseResult<Span> {
+        let t = self.next_token()?;
+        if t.kind == TokenKind::Symbol && t.text(self.text) == name {
+            Ok(t.span)
+        } else {
+            Err(ParseError::new(
+                t.span,
+                format!("expected symbol '{}', got '{}'", name, t.text(self.text)),
+            ))
         }
     }
 
