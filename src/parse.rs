@@ -284,5 +284,18 @@ mod tests {
         assert_eq!(view.function_name().kind(), ItemKind::Atom);
         assert_eq!(view.function_name().text(input), "bar");
         assert_eq!(view.args().count(), 0);
+
+        let input = "foo:bar(42, X)";
+        let items = parse(input).expect("parse failed");
+        let view = crate::item::ModuleFunctionCallView::new(ItemView::new(&items, 0)).expect("bug");
+        assert_eq!(view.module_name().text(input), "foo");
+        assert_eq!(view.function_name().text(input), "bar");
+
+        let args: Vec<_> = view.args().collect();
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0].kind(), ItemKind::Integer);
+        assert_eq!(args[0].text(input), "42");
+        assert_eq!(args[1].kind(), ItemKind::Variable);
+        assert_eq!(args[1].text(input), "X");
     }
 }
