@@ -33,14 +33,22 @@ pub type ParseResult<T = ()> = Result<T, ParseError>;
 pub struct Parser<'text> {
     pub text: &'text str,
     pub items: Vec<Item>,
+    pub comments: Vec<Item>,
     pub tokens: Vec<Token>,
     pub token_i: usize,
 }
 
 impl<'text> Parser<'text> {
-    pub fn new(text: &'text str, tokens: Vec<Token>) -> Self {
+    pub fn new(text: &'text str, mut tokens: Vec<Token>) -> Self {
+        let mut comments = Vec::new();
+        for t in tokens.iter().filter(|t| t.kind == TokenKind::Comment) {
+            comments.push(Item::new(ItemKind::Comment, t.span));
+        }
+        tokens.retain(|t| t.kind != TokenKind::Comment);
+
         Self {
             items: Vec::new(),
+            comments: Vec::new(),
             text,
             tokens,
             token_i: 0,
@@ -92,8 +100,6 @@ impl<'text> Parser<'text> {
     where
         F: Fn(&mut Self) -> ParseResult<ItemKind>,
     {
-        self.parse_comments()?;
-
         let i = self.items.len();
         let start = self.next_span().start;
         let kind = f(self)?;
@@ -105,20 +111,6 @@ impl<'text> Parser<'text> {
         let item = Item { kind, span };
         self.items.insert(i, item);
 
-        self.parse_comments()?;
-        Ok(())
-    }
-
-    pub fn parse_comments(&mut self) -> ParseResult<()> {
-        while let Some(t) = self.peek_token()
-            && t.kind == TokenKind::Comment
-        {
-            let kind = ItemKind::Comment;
-            let span = t.span;
-            let item = Item { kind, span };
-            self.items.push(item);
-            self.next_token();
-        }
         Ok(())
     }
 

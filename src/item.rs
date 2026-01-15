@@ -5,6 +5,10 @@ pub struct Item {
 }
 
 impl Item {
+    pub const fn new(kind: ItemKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
     pub fn text(self, full_text: &str) -> &str {
         self.span.text(full_text)
     }
@@ -31,6 +35,10 @@ pub struct Span {
 }
 
 impl Span {
+    pub const fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+
     pub fn text(self, full_text: &str) -> &str {
         &full_text[self.start..self.end]
     }
