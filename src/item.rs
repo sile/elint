@@ -67,6 +67,71 @@ fn get_span_and_children<'a>(items: &'a [Item], kind: ItemKind) -> Option<(Span,
 }
 
 #[derive(Debug, Clone)]
+pub struct ItemView<'a> {
+    item: Item,
+    children: &'a [Item],
+}
+
+impl<'a> ItemView<'a> {
+    pub fn new(items: &'a [Item]) -> Option<Self> {
+        let (&item, children) = items.split_first()?;
+        Some(Self { item, children })
+    }
+
+    pub fn kind(&self) -> ItemKind {
+        self.item.kind
+    }
+
+    pub fn span(&self) -> Span {
+        self.item.span
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExprsView<'a> {
+    span: Span,
+    children: &'a [Item],
+    position: usize,
+}
+
+impl<'a> ExprsView<'a> {
+    pub fn new(items: &'a [Item]) -> Option<Self> {
+        if items.is_empty() {
+            return None;
+        }
+        let t = items.first()?;
+        let span = Span::new(
+            t.span.start,
+            items.last().map(|i| i.span.end).unwrap_or(t.span.end),
+        );
+        Some(Self {
+            span,
+            children: items,
+            position: 0,
+        })
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
+}
+
+impl<'a> Iterator for ExprsView<'a> {
+    type Item = ItemView<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position >= self.children.len() {
+            return None;
+        }
+
+        let t = &self.children[self.position];
+        let child = t.span.items(self.children);
+        self.position += child.len();
+        ItemView::new(child)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BinaryOpExprsView<'a> {
     span: Span,
     children: &'a [Item],
@@ -110,15 +175,30 @@ impl<'a> ModuleFunctionCallView<'a> {
         self.span
     }
 
-    pub fn module_name(&self) -> ExprView<'_> {
-        todo!()
+    pub fn module_name(&self) -> Option<ItemView<'_>> {
+        ItemView::new(self.children)
     }
 
-    pub fn function_name(&self) -> ExprView<'_> {
-        todo!()
+    pub fn function_name(&self) -> Option<ItemView<'_>> {
+        let module_name_span = self.module_name()?.span();
+        let remaining = &self.children[self
+            .children
+            .iter()
+            .position(|t| t.span.start >= module_name_span.end)?..];
+        ItemView::new(remaining)
     }
 
-    pub fn args(&self) -> ExprsView<'_> {
-        todo!()
+    pub fn args(&self) -> Option<ExprsView<'_>> {
+        let fn_name_span = self.function_name()?.span();
+        let remaining = &self.children[self
+            .children
+            .iter()
+            .position(|t| t.span.start >= fn_name_span.end)?..];
+
+        if remaining.is_empty() {
+            return None;
+        }
+
+        ExprsView::new(remaining)
     }
 }
