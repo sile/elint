@@ -126,9 +126,7 @@ impl<'text> Parser<'text> {
         while let Some(t) = self.peek_token()
             && t.is_binary_op(self.text)
         {
-            let item = self.parse_binary_op_item()?;
-            self.items.push(item);
-
+            self.parse_binary_op_item().map(|t| self.push_item(t))?;
             self.parse_expr_item().map(|t| self.push_item(t))?;
             has_binary_op = true;
         }
