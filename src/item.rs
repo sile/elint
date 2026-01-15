@@ -64,19 +64,13 @@ impl Span {
     }
 }
 
-fn get_span_and_children<'a>(items: &'a [Item], kind: ItemKind) -> Option<(Span, &'a [Item])> {
-    let t = items.first().filter(|t| t.kind == kind)?;
-    let children = &t.span.items(items)[1..];
-    Some((t.span, children))
-}
-
 #[derive(Debug, Clone)]
-pub struct ItemView2<'a> {
+pub struct ItemView<'a> {
     items: &'a [Item],
     i: usize,
 }
 
-impl<'a> ItemView2<'a> {
+impl<'a> ItemView<'a> {
     pub fn new(items: &'a [Item], i: usize) -> Self {
         Self { items, i }
     }
@@ -111,80 +105,29 @@ impl<'a> ItemView2<'a> {
         None
     }
 
-    pub fn children(&self) -> ItemsView2<'a> {
+    pub fn children(&self) -> ItemsView<'a> {
         let start = self.i + 1;
         let end = self.end_index();
-        ItemsView2::new(self.items, start, end)
-    }
-
-    pub fn siblings(&self) -> ItemsView2<'a> {
-        let start = self.start_index();
-        let end = self.parent().map_or(self.items.len(), |p| p.end_index());
-        ItemsView2::new(self.items, start, end)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ItemsView2<'a> {
-    items: &'a [Item],
-    start: usize,
-    end: usize,
-}
-
-impl<'a> ItemsView2<'a> {
-    fn new(items: &'a [Item], start: usize, end: usize) -> Self {
-        Self { items, start, end }
-    }
-}
-
-impl<'a> Iterator for ItemsView2<'a> {
-    type Item = ItemView2<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.start;
-        let next = self.items.get(i).filter(|_| i < self.end)?;
-        self.start += next.span.items(&self.items[i..]).len();
-        Some(ItemView2::new(self.items, i))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ItemView<'a> {
-    item: Item,
-    children: &'a [Item],
-}
-
-impl<'a> ItemView<'a> {
-    pub fn new(items: &'a [Item]) -> Option<Self> {
-        let (&item, children) = items.split_first()?;
-        Some(Self { item, children })
-    }
-
-    pub fn kind(&self) -> ItemKind {
-        self.item.kind
-    }
-
-    pub fn span(&self) -> Span {
-        self.item.span
-    }
-
-    pub fn children(&self) -> ItemsView<'a> {
-        ItemsView::new(self.children)
+        ItemsView::new(self.items, start, end)
     }
 
     pub fn siblings(&self) -> ItemsView<'a> {
-        todo!()
+        let start = self.start_index();
+        let end = self.parent().map_or(self.items.len(), |p| p.end_index());
+        ItemsView::new(self.items, start, end)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct ItemsView<'a> {
     items: &'a [Item],
+    start: usize,
+    end: usize,
 }
 
 impl<'a> ItemsView<'a> {
-    pub fn new(items: &'a [Item]) -> Self {
-        Self { items }
+    fn new(items: &'a [Item], start: usize, end: usize) -> Self {
+        Self { items, start, end }
     }
 }
 
@@ -192,66 +135,19 @@ impl<'a> Iterator for ItemsView<'a> {
     type Item = ItemView<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let head = self.items.first()?;
-        let head_items = head.span.items(self.items);
-        self.items = &self.items[head_items.len()..];
-        ItemView::new(head_items)
+        let i = self.start;
+        let next = self.items.get(i).filter(|_| i < self.end)?;
+        self.start += next.span.items(&self.items[i..]).len();
+        Some(ItemView::new(self.items, i))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct BinaryOpExprsView<'a> {
-    span: Span,
-    children: &'a [Item],
-}
-
-impl<'a> BinaryOpExprsView<'a> {
-    pub fn new(items: &'a [Item]) -> Option<Self> {
-        get_span_and_children(items, ItemKind::BinaryOpExprs)
-            .map(|(span, children)| Self { span, children })
-    }
-
-    pub fn span(&self) -> Span {
-        self.span
-    }
-}
-
-impl<'a> Iterator for BinaryOpExprsView<'a> {
-    type Item = &'a [Item];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let t = self.children.first()?;
-        let child = t.span.items(self.children);
-        self.children = &self.children[child.len()..];
-        Some(child)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ModuleFunctionCallView<'a> {
-    span: Span,
-    children: &'a [Item],
-}
-
-impl<'a> ModuleFunctionCallView<'a> {
-    pub fn new(items: &'a [Item]) -> Option<Self> {
-        get_span_and_children(items, ItemKind::ModuleFunctionCall)
-            .map(|(span, children)| Self { span, children })
-    }
-
-    pub fn span(&self) -> Span {
-        self.span
-    }
-
-    pub fn module_name(&self) -> ItemView<'_> {
-        ItemView::new(self.children).expect("bug")
-    }
-
-    pub fn function_name(&self) -> ItemView<'_> {
-        self.module_name().siblings().next().expect("bug")
-    }
-
-    pub fn args(&self) -> ItemsView<'_> {
-        self.function_name().siblings()
-    }
+pub enum TypedItem<'a> {
+    BinaryOpExprs(ItemsView<'a>),
+    ModuleFunctionCall {
+        module: ItemView<'a>,
+        function: ItemView<'a>,
+        args: ItemsView<'a>,
+    },
 }
