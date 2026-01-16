@@ -146,12 +146,13 @@ impl<'text> Parser<'text> {
 
     fn parse_args(&mut self) -> ParseResult<Span> {
         self.expect_symbol("(")?;
-        if !self.is_next_symbol(":") {
+        if !self.is_next_symbol(")") {
             loop {
                 self.parse_expr()?;
                 if !self.is_next_symbol(",") {
                     break;
                 }
+                let _ = self.next_token()?;
             }
         }
         self.expect_symbol(")")
@@ -198,7 +199,10 @@ impl<'text> Parser<'text> {
             TokenKind::SigilString => self.push_item(ItemKind::SigilString, t.span),
             TokenKind::Keyword | TokenKind::Symbol => {
                 // Handle as appropriate for your grammar
-                todo!("Define handling for Keyword and Symbol tokens")
+                todo!(
+                    "Define handling for Keyword and Symbol tokens: {}",
+                    t.text(self.text)
+                )
             }
         }
         Ok(())
