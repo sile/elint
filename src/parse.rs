@@ -463,4 +463,34 @@ mod tests {
         assert_eq!(clauses[0].args().count(), 1);
         assert_eq!(clauses[0].body().count(), 1);
     }
+
+    #[test]
+    fn parse_case_expr() {
+        let input = "case X of 42 -> ok; _ -> error end";
+        let items = parse(input).expect("parse failed");
+
+        assert!(!items.is_empty());
+        assert_eq!(items[0].kind, ItemKind::Case);
+        assert_eq!(items[0].text(input), input);
+
+        let view = crate::item::CaseView::new(ItemView::new(&items, 0)).expect("bug");
+
+        // Check the expression being matched
+        assert_eq!(view.expr().kind(), ItemKind::Variable);
+        assert_eq!(view.expr().text(input), "X");
+
+        // Check the case clauses
+        let clauses: Vec<_> = view.clauses().collect();
+        assert_eq!(clauses.len(), 2);
+
+        // First clause: 42 -> ok
+        assert_eq!(clauses[0].pattern().kind(), ItemKind::Integer);
+        assert_eq!(clauses[0].pattern().text(input), "42");
+        assert_eq!(clauses[0].body().count(), 1);
+
+        // Second clause: _ -> error
+        assert_eq!(clauses[1].pattern().kind(), ItemKind::Atom);
+        assert_eq!(clauses[1].pattern().text(input), "_");
+        assert_eq!(clauses[1].body().count(), 1);
+    }
 }
