@@ -292,3 +292,48 @@ impl<'a> CaseClauseView<'a> {
         self.0.clone().nth(2).expect("bug").children()
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct MaybeExprView<'a>(ItemsView<'a>);
+
+impl<'a> MaybeExprView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::MaybeExpr)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn body(&self) -> ItemsView<'a> {
+        self.0.clone().next().expect("bug").children()
+    }
+
+    pub fn clauses(&self) -> impl Iterator<Item = ElseClauseView<'a>> {
+        self.0
+            .clone()
+            .nth(1)
+            .expect("bug")
+            .children()
+            .map(|t| ElseClauseView::new(t).expect("bug"))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ElseClauseView<'a>(ItemsView<'a>);
+
+impl<'a> ElseClauseView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::ElseClause)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn pattern(&self) -> ItemView<'a> {
+        self.0.clone().next().expect("bug")
+    }
+
+    pub fn guard(&self) -> ItemsView<'a> {
+        self.0.clone().nth(1).expect("bug").children()
+    }
+
+    pub fn body(&self) -> ItemsView<'a> {
+        self.0.clone().nth(2).expect("bug").children()
+    }
+}
