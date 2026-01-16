@@ -311,7 +311,7 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
         self.expect_keyword("maybe")?;
         self.parse_body()?;
-        if self.is_next_keyword("end") {
+        if !self.is_next_keyword("end") {
             self.expect_keyword("else")?;
             self.parse_else_clauses()?;
         }
