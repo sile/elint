@@ -1,6 +1,10 @@
-# RULE: foo
+# RULE: TODO
+
+- Context: expr
 
 ## NG
+
+Nested `case`s. 
 
 ```erlang
 case '$0' of
@@ -17,6 +21,8 @@ end.
 ```
 
 ## OK
+
+Use `maybe` instead.
 
 ```erlang
 maybe
