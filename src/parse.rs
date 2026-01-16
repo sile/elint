@@ -162,12 +162,16 @@ impl<'text> Parser<'text> {
         }
     }
 
+    fn parse_args(&mut self) -> ParseResult<Span> {
+        self.expect_symbol("(")?;
+        // todo: args
+        self.expect_symbol(")")
+    }
+
     fn parse_module_fun_call(&mut self, module_item_i: usize) -> ParseResult {
         let _ = self.next_token()?; // ':'
         self.parse_base_expr_item()?; // function name
-        self.expect_symbol("(")?;
-        // todo: args
-        let last = self.expect_symbol(")")?;
+        let last = self.parse_args()?; // (...)
 
         let start = self.items[module_item_i].span.start;
         let span = Span::new(start, last.end);
