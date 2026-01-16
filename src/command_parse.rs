@@ -39,7 +39,6 @@ pub fn to_json<'a>(
 ) -> nojson::Json<ItemViewJson<'a>> {
     let item_json = ItemViewJson {
         kind: format!("{:?}", view.kind()),
-        span: (view.span().start, view.span().end),
         text: view.text(text),
         children: view
             .children()
@@ -52,7 +51,6 @@ pub fn to_json<'a>(
 #[derive(Debug)]
 pub struct ItemViewJson<'a> {
     pub kind: String,
-    pub span: (usize, usize),
     pub text: &'a str,
     pub children: Vec<ItemViewJson<'a>>,
 }
@@ -61,23 +59,22 @@ impl nojson::DisplayJson for ItemViewJson<'_> {
     fn fmt(&self, f: &mut nojson::JsonFormatter<'_, '_>) -> std::fmt::Result {
         f.object(|f| {
             f.member("kind", &self.kind)?;
-            f.member(
-                "span",
-                nojson::array(|f| {
-                    f.element(self.span.0)?;
-                    f.element(self.span.1)
-                }),
-            )?;
-            f.member("text", self.text)?;
-            f.member(
-                "children",
-                nojson::array(|f| {
-                    for child in &self.children {
-                        f.element(child)?;
-                    }
-                    Ok(())
-                }),
-            )
+            if self.children.is_empty() {
+                if !self.text.is_empty() {
+                    f.member("text", self.text)?;
+                }
+            } else {
+                f.member(
+                    "children",
+                    nojson::array(|f| {
+                        for child in &self.children {
+                            f.element(child)?;
+                        }
+                        Ok(())
+                    }),
+                )?;
+            }
+            Ok(())
         })
     }
 }
