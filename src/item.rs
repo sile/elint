@@ -38,6 +38,9 @@ pub enum ItemKind {
     Case, // TODO: CaseExpr
     CaseClauses,
     CaseClause,
+    MaybeExpr,
+    Clauses,
+    ElseClause,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
