@@ -156,13 +156,13 @@ impl<'text> Parser<'text> {
         let i = self.items.len();
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
-            self.parse_module_function_call(i)
+            self.parse_module_fun_call(i)
         } else {
             Ok(())
         }
     }
 
-    fn parse_module_function_call(&mut self, module_item_i: usize) -> ParseResult {
+    fn parse_module_fun_call(&mut self, module_item_i: usize) -> ParseResult {
         let _ = self.next_token()?; // ':'
         self.parse_base_expr_item()?; // function name
         self.expect_symbol("(")?;
@@ -171,7 +171,7 @@ impl<'text> Parser<'text> {
 
         let start = self.items[module_item_i].span.start;
         let span = Span::new(start, last.end);
-        self.insert_item(module_item_i, ItemKind::ModuleFunctionCall, span);
+        self.insert_item(module_item_i, ItemKind::ModuleFunCall, span);
         Ok(())
     }
 
@@ -266,19 +266,19 @@ mod tests {
     }
 
     #[test]
-    fn parse_module_function_call() {
+    fn parse_module_fun_call() {
         let input = "foo:bar()";
         let items = parse(input).expect("parse failed");
 
         assert_eq!(items.len(), 3);
-        assert_eq!(items[0].kind, ItemKind::ModuleFunctionCall);
+        assert_eq!(items[0].kind, ItemKind::ModuleFunCall);
         assert_eq!(items[0].text(input), "foo:bar()");
         assert_eq!(items[1].kind, ItemKind::Atom);
         assert_eq!(items[1].text(input), "foo");
         assert_eq!(items[2].kind, ItemKind::Atom);
         assert_eq!(items[2].text(input), "bar");
 
-        let view = crate::item::ModuleFunctionCallView::new(ItemView::new(&items, 0)).expect("bug");
+        let view = crate::item::ModuleFunCallView::new(ItemView::new(&items, 0)).expect("bug");
         assert_eq!(view.module_name().kind(), ItemKind::Atom);
         assert_eq!(view.module_name().text(input), "foo");
         assert_eq!(view.function_name().kind(), ItemKind::Atom);
@@ -287,7 +287,7 @@ mod tests {
 
         let input = "foo:bar(42, X)";
         let items = parse(input).expect("parse failed");
-        let view = crate::item::ModuleFunctionCallView::new(ItemView::new(&items, 0)).expect("bug");
+        let view = crate::item::ModuleFunCallView::new(ItemView::new(&items, 0)).expect("bug");
         assert_eq!(view.module_name().text(input), "foo");
         assert_eq!(view.function_name().text(input), "bar");
 

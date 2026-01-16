@@ -28,7 +28,8 @@ pub enum ItemKind {
     Comment,
     BinaryOp,
     BinaryOpExprs,
-    ModuleFunctionCall,
+    ModuleFunCall,
+    Args,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -175,11 +176,11 @@ impl<'a> BinaryOpExprsView<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ModuleFunctionCallView<'a>(ItemsView<'a>);
+pub struct ModuleFunCallView<'a>(ItemsView<'a>);
 
-impl<'a> ModuleFunctionCallView<'a> {
+impl<'a> ModuleFunCallView<'a> {
     pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
-        item.expect_kind(ItemKind::ModuleFunctionCall)?;
+        item.expect_kind(ItemKind::ModuleFunCall)?;
         Ok(Self(item.children()))
     }
 
