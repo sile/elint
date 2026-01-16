@@ -41,6 +41,7 @@ pub enum ItemKind {
     MaybeExpr,
     Clauses,
     ElseClause,
+    Tuple,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

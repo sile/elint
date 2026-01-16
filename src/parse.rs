@@ -234,6 +234,27 @@ impl<'text> Parser<'text> {
         Ok(last)
     }
 
+    fn parse_tuple<F>(&mut self, f: F) -> ParseResult
+    where
+        F: Fn(&mut Self) -> ParseResult,
+    {
+        let (i, start) = self.span_start();
+        self.expect_symbol("{")?;
+        if !self.is_next_symbol("}") {
+            loop {
+                f(self)?;
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("}")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Tuple, span);
+        Ok(())
+    }
+
     fn parse_module_fun_call(&mut self, module_item_i: usize) -> ParseResult {
         let _ = self.next_token()?; // ':'
         self.parse_base_expr_item()?; // function name
@@ -243,6 +264,15 @@ impl<'text> Parser<'text> {
         let span = Span::new(start, last.end);
         self.insert_item(module_item_i, ItemKind::ModuleFunCall, span);
         Ok(())
+    }
+
+    fn expect_optional_symbol(&mut self, name: &str) -> bool {
+        if self.is_next_symbol(name) {
+            self.token_i += 1;
+            true
+        } else {
+            false
+        }
     }
 
     fn expect_symbol(&mut self, name: &str) -> ParseResult<Span> {
@@ -390,10 +420,14 @@ impl<'text> Parser<'text> {
                 }
             }
             TokenKind::Symbol => {
-                todo!(
-                    "Define handling for Keyword and Symbol tokens: {}",
-                    t.text(self.text)
-                )
+                self.token_i -= 1;
+                match t.text(self.text) {
+                    "{" => self.parse_tuple(|p| p.parse_expr())?,
+                    _ => todo!(
+                        "Define handling for Keyword and Symbol tokens: {}",
+                        t.text(self.text)
+                    ),
+                }
             }
         }
         Ok(())
