@@ -274,19 +274,19 @@ impl<'text> Parser<'text> {
             .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
     }
 
-    /* TODO
-        fn is_next_keyword(&self, name: &str) -> bool {
-            self.peek_token()
-                .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
-        }
-    */
+    fn is_next_keyword(&self, name: &str) -> bool {
+        self.peek_token()
+            .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
+    }
 
     fn parse_maybe_expr(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
         self.expect_keyword("maybe")?;
         self.parse_body()?;
-        self.expect_keyword("else")?;
-        self.parse_else_clauses()?;
+        if self.is_next_keyword("end") {
+            self.expect_keyword("else")?;
+            self.parse_else_clauses()?;
+        }
         self.expect_keyword("end")?;
 
         let span = self.span_finish(start);
