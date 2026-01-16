@@ -62,6 +62,9 @@ impl Span {
     pub fn items(self, items: &[Item]) -> &[Item] {
         assert!(!items.is_empty());
         assert_eq!(self, items[0].span);
+        if self.start == self.end {
+            return &items[..1];
+        }
 
         let mut n = items
             .binary_search_by_key(&self.end, |t| t.span.start)

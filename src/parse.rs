@@ -72,6 +72,11 @@ impl<'text> Parser<'text> {
         }
     }
 
+    fn next_empty_span(&self) -> Span {
+        let start = self.next_span().start;
+        Span::new(start, start)
+    }
+
     pub fn next_token(&mut self) -> ParseResult<Token> {
         let t = self.token()?;
         self.token_i += 1;
@@ -150,7 +155,7 @@ impl<'text> Parser<'text> {
         let start = self.parse_atom()?.start;
         self.parse_args()?;
         // TODO: guard
-        self.push_item(ItemKind::Guard, self.next_span());
+        self.push_item(ItemKind::Guard, self.next_empty_span());
         self.expect_symbol("->")?;
         self.parse_body()?;
         let span = self.span_finish(start);
@@ -341,7 +346,7 @@ impl<'text> Parser<'text> {
 
         self.parse_pattern()?; // pattern
         // TODO: guard (optional)
-        self.push_item(ItemKind::Guard, self.next_span());
+        self.push_item(ItemKind::Guard, self.next_empty_span());
         self.expect_symbol("->")?;
         self.parse_body()?; // clause body
 
@@ -386,7 +391,7 @@ impl<'text> Parser<'text> {
 
         self.parse_pattern()?; // pattern
         // TODO: guard (optional)
-        self.push_item(ItemKind::Guard, self.next_span());
+        self.push_item(ItemKind::Guard, self.next_empty_span());
         self.expect_symbol("->")?;
         self.parse_body()?; // clause body
 
