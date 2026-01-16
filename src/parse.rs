@@ -207,6 +207,7 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_args(&mut self) -> ParseResult<Span> {
+        let (i, start) = self.span_start();
         self.expect_symbol("(")?;
         if !self.is_next_symbol(")") {
             loop {
@@ -217,7 +218,11 @@ impl<'text> Parser<'text> {
                 let _ = self.next_token()?;
             }
         }
-        self.expect_symbol(")")
+        let last = self.expect_symbol(")")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Args, span);
+        Ok(last)
     }
 
     fn parse_module_fun_call(&mut self, module_item_i: usize) -> ParseResult {
@@ -329,13 +334,15 @@ mod tests {
         let input = "foo:bar()";
         let items = parse(input).expect("parse failed");
 
-        assert_eq!(items.len(), 3);
+        assert_eq!(items.len(), 4);
         assert_eq!(items[0].kind, ItemKind::ModuleFunCall);
         assert_eq!(items[0].text(input), "foo:bar()");
         assert_eq!(items[1].kind, ItemKind::Atom);
         assert_eq!(items[1].text(input), "foo");
         assert_eq!(items[2].kind, ItemKind::Atom);
         assert_eq!(items[2].text(input), "bar");
+        assert_eq!(items[3].kind, ItemKind::Args);
+        assert_eq!(items[3].text(input), "()");
 
         let view = crate::item::ModuleFunCallView::new(ItemView::new(&items, 0)).expect("bug");
         assert_eq!(view.module_name().kind(), ItemKind::Atom);

@@ -196,8 +196,8 @@ impl<'a> ModuleFunCallView<'a> {
         self.0.clone().nth(1).expect("bug")
     }
 
-    pub fn args(&self) -> impl Iterator<Item = ItemView<'a>> {
-        self.0.clone().skip(2)
+    pub fn args(&self) -> ItemsView<'a> {
+        self.0.clone().nth(2).expect("bug").children()
     }
 }
 
