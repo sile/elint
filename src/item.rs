@@ -200,3 +200,52 @@ impl<'a> ModuleFunCallView<'a> {
         self.0.clone().skip(2)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct FunDeclView<'a>(ItemsView<'a>);
+
+impl<'a> FunDeclView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::FunDecl)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn clauses(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FunClauseView<'a>(ItemsView<'a>);
+
+impl<'a> FunClauseView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::FunClause)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn name(&self) -> ItemView<'a> {
+        self.0.clone().next().expect("bug")
+    }
+
+    pub fn args(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0
+            .clone()
+            .skip_while(|item| item.kind() != ItemKind::Args)
+            .next()
+            .map(|args_item| args_item.children())
+            .into_iter()
+            .flatten()
+    }
+
+    pub fn guard(&self) -> Option<ItemView<'a>> {
+        self.0.clone().find(|item| item.kind() == ItemKind::Guard)
+    }
+
+    pub fn body(&self) -> impl Iterator<Item = ItemView<'a>> {
+        self.0
+            .clone()
+            .skip_while(|item| item.kind() != ItemKind::Guard)
+            .skip(1)
+    }
+}
