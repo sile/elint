@@ -256,9 +256,73 @@ impl<'text> Parser<'text> {
         }
     }
 
+    fn expect_keyword(&mut self, name: &str) -> ParseResult<Span> {
+        let t = self.next_token()?;
+        if t.kind == TokenKind::Keyword && t.text(self.text) == name {
+            Ok(t.span)
+        } else {
+            Err(ParseError::new(
+                t.span,
+                format!("expected keyword '{}', got '{}'", name, t.text(self.text)),
+            ))
+        }
+    }
+
     fn is_next_symbol(&self, name: &str) -> bool {
         self.peek_token()
             .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
+    }
+
+    /*
+        fn is_next_keyword(&self, name: &str) -> bool {
+            self.peek_token()
+                .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
+        }
+    */
+
+    fn parse_case(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("case")?;
+        self.parse_expr()?;
+        self.expect_keyword("of")?;
+        self.parse_case_clauses()?;
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Case, span);
+        Ok(())
+    }
+
+    fn parse_case_clauses(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+        loop {
+            self.parse_case_clause()?;
+            if !self.is_next_symbol(";") {
+                break;
+            }
+            let _ = self.next_token()?; // consume ';'
+        }
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::CaseClauses, span);
+        Ok(())
+    }
+
+    fn parse_pattern(&mut self) -> ParseResult {
+        self.parse_expr() // TODO
+    }
+
+    fn parse_case_clause(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        self.parse_pattern()?; // pattern
+        // TODO: guard (optional)
+        self.push_item(ItemKind::Guard, self.next_span());
+        self.expect_symbol("->")?;
+        self.parse_body()?; // clause body
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::CaseClause, span);
+        Ok(())
     }
 
     fn parse_base_expr_item(&mut self) -> ParseResult<()> {
@@ -272,8 +336,14 @@ impl<'text> Parser<'text> {
             TokenKind::Char => self.push_item(ItemKind::Char, t.span),
             TokenKind::String => self.push_item(ItemKind::String, t.span),
             TokenKind::SigilString => self.push_item(ItemKind::SigilString, t.span),
-            TokenKind::Keyword | TokenKind::Symbol => {
-                // Handle as appropriate for your grammar
+            TokenKind::Keyword => match t.text(self.text) {
+                "case" => self.parse_case()?,
+                _ => todo!(
+                    "Define handling for Keyword and Symbol tokens: {}",
+                    t.text(self.text)
+                ),
+            },
+            TokenKind::Symbol => {
                 todo!(
                     "Define handling for Keyword and Symbol tokens: {}",
                     t.text(self.text)

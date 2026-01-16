@@ -35,6 +35,9 @@ pub enum ItemKind {
     FunClause,
     Guard,
     Body,
+    Case,
+    CaseClauses,
+    CaseClause,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
