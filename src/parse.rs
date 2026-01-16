@@ -96,6 +96,10 @@ impl<'text> Parser<'text> {
         self.token_i == self.tokens.len()
     }
 
+    pub fn parse_module(&mut self) -> ParseResult {
+        todo!()
+    }
+
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         self.parse_expr_item()?;

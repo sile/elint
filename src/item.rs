@@ -30,6 +30,8 @@ pub enum ItemKind {
     BinaryOpExprs,
     ModuleFunCall,
     Args,
+    Module,
+    FunDecl,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
