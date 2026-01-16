@@ -10,7 +10,7 @@ fn main() -> noargs::Result<()> {
     }
     noargs::HELP_FLAG.take_help(&mut args);
 
-    let extended_mode = noargs::flag("ext").short('h').take(&mut args).is_present();
+    let extended_mode = noargs::flag("ext").short('x').take(&mut args).is_present();
     if extended_mode {
         let _ = elint::command_parse::try_run(&mut args)?;
         if let Some(help) = args.finish()? {
