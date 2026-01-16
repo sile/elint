@@ -135,7 +135,8 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
 
         self.parse_expr()?;
-        while !self.is_next_symbol(";") && !self.is_next_symbol(".") {
+        while self.is_next_symbol(",") {
+            let _ = self.next_token();
             self.parse_expr()?;
         }
 
@@ -337,7 +338,10 @@ impl<'text> Parser<'text> {
             TokenKind::String => self.push_item(ItemKind::String, t.span),
             TokenKind::SigilString => self.push_item(ItemKind::SigilString, t.span),
             TokenKind::Keyword => match t.text(self.text) {
-                "case" => self.parse_case()?,
+                "case" => {
+                    self.token_i -= 1;
+                    self.parse_case()?
+                }
                 _ => todo!(
                     "Define handling for Keyword and Symbol tokens: {}",
                     t.text(self.text)
@@ -489,7 +493,7 @@ mod tests {
         assert_eq!(clauses[0].body().count(), 1);
 
         // Second clause: _ -> error
-        assert_eq!(clauses[1].pattern().kind(), ItemKind::Atom);
+        assert_eq!(clauses[1].pattern().kind(), ItemKind::Variable);
         assert_eq!(clauses[1].pattern().text(input), "_");
         assert_eq!(clauses[1].body().count(), 1);
     }

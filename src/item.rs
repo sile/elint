@@ -35,7 +35,7 @@ pub enum ItemKind {
     FunClause,
     Guard,
     Body,
-    Case,
+    Case, // TODO: CaseExpr
     CaseClauses,
     CaseClause,
 }
