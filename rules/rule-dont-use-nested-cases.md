@@ -1,4 +1,4 @@
-# LINT RULE: foo
+# RULE: foo
 
 ## NG
 
