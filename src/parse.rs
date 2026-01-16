@@ -240,12 +240,10 @@ impl<'text> Parser<'text> {
     {
         let (i, start) = self.span_start();
         self.expect_symbol("{")?;
-        if !self.is_next_symbol("}") {
-            loop {
-                f(self)?;
-                if !self.expect_optional_symbol(",") {
-                    break;
-                }
+        while !self.is_next_symbol("}") {
+            f(self)?;
+            if !self.expect_optional_symbol(",") {
+                break;
             }
         }
         self.expect_symbol("}")?;
@@ -599,5 +597,28 @@ mod tests {
         assert_eq!(clauses[0].pattern().kind(), ItemKind::Variable);
         assert_eq!(clauses[0].pattern().text(input), "_");
         assert_eq!(clauses[0].body().count(), 1);
+    }
+
+    #[test]
+    fn parse_tuple() {
+        let input = "{42, X, ok}";
+        let items = parse(input).expect("parse failed");
+
+        assert!(!items.is_empty());
+        assert_eq!(items[0].kind, ItemKind::Tuple);
+        assert_eq!(items[0].text(input), input);
+
+        let view = crate::item::ItemView::new(&items, 0);
+        let tuple_items: Vec<_> = view.children().collect();
+        assert_eq!(tuple_items.len(), 3);
+
+        assert_eq!(tuple_items[0].kind(), ItemKind::Integer);
+        assert_eq!(tuple_items[0].text(input), "42");
+
+        assert_eq!(tuple_items[1].kind(), ItemKind::Variable);
+        assert_eq!(tuple_items[1].text(input), "X");
+
+        assert_eq!(tuple_items[2].kind(), ItemKind::Atom);
+        assert_eq!(tuple_items[2].text(input), "ok");
     }
 }
