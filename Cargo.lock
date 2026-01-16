@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "erl_tokenize",
  "noargs",
+ "nojson",
  "orfail",
 ]
 
@@ -22,6 +23,12 @@ name = "noargs"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e5dc223a8d69eaeb19c31218a69a55112fe79965764430f092532aed848f1b8"
+
+[[package]]
+name = "nojson"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20f9facf70a088279ffcf06cb5f897660ebd32621629b51872f4d4b25c77e494"
 
 [[package]]
 name = "orfail"

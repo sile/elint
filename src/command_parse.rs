@@ -16,7 +16,8 @@ pub fn try_run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
     let tokens = crate::token::tokenize(&text)?;
     let mut parser = crate::parse::Parser::new(&text, tokens);
     parser.parse_module()?;
-    parser.items;
+
+    let view = crate::item::ItemView::new(&parser.items, 0);
 
     Ok(true)
 }

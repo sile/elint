@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 erl_tokenize = "0.10.0"
 noargs = "0.4.2"
+nojson = "0.3.6"
 orfail = "2.0.0"
