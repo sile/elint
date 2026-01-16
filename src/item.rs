@@ -34,6 +34,7 @@ pub enum ItemKind {
     FunDecl,
     FunClause,
     Guard,
+    Body,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -71,7 +72,7 @@ impl Span {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ItemView<'a> {
     items: &'a [Item],
     i: usize,
@@ -137,7 +138,7 @@ impl<'a> ItemView<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ItemsView<'a> {
     items: &'a [Item],
     start: usize,
@@ -210,7 +211,7 @@ impl<'a> FunDeclView<'a> {
         Ok(Self(item.children()))
     }
 
-    pub fn clauses(&self) -> impl Iterator<Item = ItemView<'a>> {
+    pub fn clauses(&self) -> ItemsView<'a> {
         self.0.clone()
     }
 }
@@ -228,24 +229,15 @@ impl<'a> FunClauseView<'a> {
         self.0.clone().next().expect("bug")
     }
 
-    pub fn args(&self) -> impl Iterator<Item = ItemView<'a>> {
-        self.0
-            .clone()
-            .skip_while(|item| item.kind() != ItemKind::Args)
-            .next()
-            .map(|args_item| args_item.children())
-            .into_iter()
-            .flatten()
+    pub fn args(&self) -> ItemsView<'a> {
+        self.0.clone().nth(1).expect("bug").children()
     }
 
-    pub fn guard(&self) -> Option<ItemView<'a>> {
-        self.0.clone().find(|item| item.kind() == ItemKind::Guard)
+    pub fn guard(&self) -> ItemsView<'a> {
+        self.0.clone().nth(2).expect("bug").children()
     }
 
-    pub fn body(&self) -> impl Iterator<Item = ItemView<'a>> {
-        self.0
-            .clone()
-            .skip_while(|item| item.kind() != ItemKind::Guard)
-            .skip(1)
+    pub fn body(&self) -> ItemsView<'a> {
+        self.0.clone().nth(3).expect("bug").children()
     }
 }

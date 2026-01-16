@@ -131,6 +131,19 @@ impl<'text> Parser<'text> {
         Span::new(start, self.last_span().end)
     }
 
+    pub fn parse_body(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        self.parse_expr()?;
+        while !self.is_next_symbol(";") && !self.is_next_symbol(".") {
+            self.parse_expr()?;
+        }
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Body, span);
+        Ok(())
+    }
+
     pub fn parse_fun_clause(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         let start = self.parse_atom()?.start;
@@ -138,12 +151,7 @@ impl<'text> Parser<'text> {
         // TODO: guard
         self.push_item(ItemKind::Guard, self.next_span());
         self.expect_symbol("->")?;
-
-        self.parse_expr()?;
-        while !self.is_next_symbol(";") && !self.is_next_symbol(".") {
-            self.parse_expr()?;
-        }
-
+        self.parse_body()?;
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::FunClause, span);
         Ok(())
