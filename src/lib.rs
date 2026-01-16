@@ -1,4 +1,5 @@
 pub mod ast_expr;
+pub mod command_parse;
 pub mod item;
 pub mod parse;
 pub mod token;

@@ -8,8 +8,16 @@ fn main() -> noargs::Result<()> {
         println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
-
     noargs::HELP_FLAG.take_help(&mut args);
+
+    let extended_mode = noargs::flag("ext").short('h').take(&mut args).is_present();
+    if extended_mode {
+        let _ = elint::command_parse::try_run(&mut args)?;
+        if let Some(help) = args.finish()? {
+            print!("{help}");
+        }
+        return Ok(());
+    }
 
     let path: std::path::PathBuf = noargs::arg("PATH")
         .take(&mut args)
