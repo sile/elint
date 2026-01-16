@@ -211,8 +211,8 @@ impl<'a> FunDeclView<'a> {
         Ok(Self(item.children()))
     }
 
-    pub fn clauses(&self) -> ItemsView<'a> {
-        self.0.clone()
+    pub fn clauses(&self) -> impl Iterator<Item = FunClauseView<'a>> {
+        self.0.clone().map(|t| FunClauseView::new(t).expect("bug"))
     }
 }
 

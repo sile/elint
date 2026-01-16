@@ -372,4 +372,25 @@ mod tests {
         assert_eq!(args[1].kind(), ItemKind::Variable);
         assert_eq!(args[1].text(input), "X");
     }
+
+    #[test]
+    fn parse_fun_decl() {
+        let input = "foo(X) -> X.";
+        let tokens = crate::token::tokenize(input).expect("tokenization failed");
+        let mut parser = Parser::new(input, tokens);
+        parser.parse_fun_decl().expect("parse failed");
+
+        let items = &parser.items;
+        assert!(!items.is_empty());
+        assert_eq!(items[0].kind, ItemKind::FunDecl);
+        assert_eq!(items[0].text(input), input);
+
+        let view = crate::item::FunDeclView::new(ItemView::new(items, 0)).expect("bug");
+        let clauses: Vec<_> = view.clauses().collect();
+        assert_eq!(clauses.len(), 1);
+
+        assert_eq!(clauses[0].name().text(input), "foo");
+        assert_eq!(clauses[0].args().count(), 1);
+        assert_eq!(clauses[0].body().count(), 1);
+    }
 }
