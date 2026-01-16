@@ -274,12 +274,53 @@ impl<'text> Parser<'text> {
             .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
     }
 
-    /*
+    /* TODO
         fn is_next_keyword(&self, name: &str) -> bool {
             self.peek_token()
                 .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
         }
     */
+
+    fn parse_maybe_expr(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("maybe")?;
+        self.parse_body()?;
+        self.expect_keyword("else")?;
+        self.parse_else_clauses()?;
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::MaybeExpr, span);
+        Ok(())
+    }
+
+    fn parse_else_clauses(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+        loop {
+            self.parse_else_clause()?;
+            if !self.is_next_symbol(";") {
+                break;
+            }
+            let _ = self.next_token()?; // consume ';'
+        }
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Clauses, span);
+        Ok(())
+    }
+
+    fn parse_else_clause(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        self.parse_pattern()?; // pattern
+        // TODO: guard (optional)
+        self.push_item(ItemKind::Guard, self.next_span());
+        self.expect_symbol("->")?;
+        self.parse_body()?; // clause body
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::ElseClause, span);
+        Ok(())
+    }
 
     fn parse_case(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
@@ -337,16 +378,17 @@ impl<'text> Parser<'text> {
             TokenKind::Char => self.push_item(ItemKind::Char, t.span),
             TokenKind::String => self.push_item(ItemKind::String, t.span),
             TokenKind::SigilString => self.push_item(ItemKind::SigilString, t.span),
-            TokenKind::Keyword => match t.text(self.text) {
-                "case" => {
-                    self.token_i -= 1;
-                    self.parse_case()?
+            TokenKind::Keyword => {
+                self.token_i -= 1;
+                match t.text(self.text) {
+                    "case" => self.parse_case()?,
+                    "maybe" => self.parse_maybe_expr()?,
+                    _ => todo!(
+                        "Define handling for Keyword and Symbol tokens: {}",
+                        t.text(self.text)
+                    ),
                 }
-                _ => todo!(
-                    "Define handling for Keyword and Symbol tokens: {}",
-                    t.text(self.text)
-                ),
-            },
+            }
             TokenKind::Symbol => {
                 todo!(
                     "Define handling for Keyword and Symbol tokens: {}",
