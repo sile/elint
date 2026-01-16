@@ -96,24 +96,6 @@ impl<'text> Parser<'text> {
         self.token_i == self.tokens.len()
     }
 
-    pub fn parse_item<F>(&mut self, f: F) -> ParseResult
-    where
-        F: Fn(&mut Self) -> ParseResult<ItemKind>,
-    {
-        let i = self.items.len();
-        let start = self.next_span().start;
-        let kind = f(self)?;
-        let end = self.last_span().end;
-
-        // TODO: negative span check
-
-        let span = Span { start, end };
-        let item = Item { kind, span };
-        self.items.insert(i, item);
-
-        Ok(())
-    }
-
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         self.parse_expr_item()?;
@@ -164,7 +146,14 @@ impl<'text> Parser<'text> {
 
     fn parse_args(&mut self) -> ParseResult<Span> {
         self.expect_symbol("(")?;
-        // todo: args
+        if !self.is_next_symbol(":") {
+            loop {
+                self.parse_expr()?;
+                if !self.is_next_symbol(",") {
+                    break;
+                }
+            }
+        }
         self.expect_symbol(")")
     }
 
