@@ -32,6 +32,8 @@ pub enum ItemKind {
     Args,
     Module,
     FunDecl,
+    FunClause,
+    Guard,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

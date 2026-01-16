@@ -110,16 +110,38 @@ impl<'text> Parser<'text> {
     }
 
     pub fn parse_fun_decl(&mut self) -> ParseResult {
-        let i = self.items.len();
-        let start = self.parse_atom()?.start;
-        self.parse_args()?;
-        // TODO: guard, clause
-        self.expect_symbol("->")?;
-        // TODO: exprs
+        let (i, start) = self.span_start();
+        self.parse_fun_clause()?;
+        while self.is_next_symbol(";") {
+            self.expect_symbol(";")?;
+            self.parse_fun_clause()?;
+        }
         let end = self.expect_symbol(".")?.end;
 
         let span = Span::new(start, end);
         self.insert_item(i, ItemKind::FunDecl, span);
+        Ok(())
+    }
+
+    fn span_start(&self) -> (usize, usize) {
+        (self.items.len(), self.next_span().start)
+    }
+
+    pub fn parse_fun_clause(&mut self) -> ParseResult<()> {
+        let i = self.items.len();
+        let start = self.parse_atom()?.start;
+        self.parse_args()?;
+        // TODO: guard
+        self.push_item(ItemKind::Guard, self.next_span());
+        self.expect_symbol("->")?;
+
+        self.parse_expr()?;
+        while !self.is_next_symbol(";") && !self.is_next_symbol(".") {
+            self.parse_expr()?;
+        }
+
+        let span = Span::new(start, self.last_span().end);
+        self.insert_item(i, ItemKind::FunClause, span);
         Ok(())
     }
 
@@ -131,20 +153,6 @@ impl<'text> Parser<'text> {
         self.push_item(ItemKind::Atom, t.span);
         Ok(t.span)
     }
-
-    /*    fn parse_args(&mut self) -> ParseResult<Span> {
-        self.expect_symbol("(")?;
-        if !self.is_next_symbol(")") {
-            loop {
-                self.parse_expr()?;
-                if !self.is_next_symbol(",") {
-                    break;
-                }
-                let _ = self.next_token()?;
-            }
-        }
-        self.expect_symbol(")")
-    }*/
 
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
