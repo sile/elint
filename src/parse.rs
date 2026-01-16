@@ -539,4 +539,31 @@ mod tests {
         assert_eq!(clauses[1].pattern().text(input), "_");
         assert_eq!(clauses[1].body().count(), 1);
     }
+
+    #[test]
+    fn parse_maybe_expr() {
+        let input = "maybe X else _ -> error end";
+        let items = parse(input).expect("parse failed");
+
+        assert!(!items.is_empty());
+        assert_eq!(items[0].kind, ItemKind::MaybeExpr);
+        assert_eq!(items[0].text(input), input);
+
+        let view = crate::item::MaybeExprView::new(ItemView::new(&items, 0)).expect("bug");
+
+        // Check the body
+        let body_items: Vec<_> = view.body().collect();
+        assert_eq!(body_items.len(), 1);
+        assert_eq!(body_items[0].kind(), ItemKind::Variable);
+        assert_eq!(body_items[0].text(input), "X");
+
+        // Check the else clauses
+        let clauses: Vec<_> = view.clauses().collect();
+        assert_eq!(clauses.len(), 1);
+
+        // First clause: _ -> error
+        assert_eq!(clauses[0].pattern().kind(), ItemKind::Variable);
+        assert_eq!(clauses[0].pattern().text(input), "_");
+        assert_eq!(clauses[0].body().count(), 1);
+    }
 }
