@@ -127,6 +127,10 @@ impl<'text> Parser<'text> {
         (self.items.len(), self.next_span().start)
     }
 
+    fn span_finish(&self, start: usize) -> Span {
+        Span::new(start, self.last_span().end)
+    }
+
     pub fn parse_fun_clause(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         let start = self.parse_atom()?.start;
@@ -140,7 +144,7 @@ impl<'text> Parser<'text> {
             self.parse_expr()?;
         }
 
-        let span = Span::new(start, self.last_span().end);
+        let span = self.span_finish(start);
         self.insert_item(i, ItemKind::FunClause, span);
         Ok(())
     }
