@@ -97,8 +97,54 @@ impl<'text> Parser<'text> {
     }
 
     pub fn parse_module(&mut self) -> ParseResult {
-        todo!()
+        while !self.is_eof() {
+            if self.is_next_symbol("-") {
+                todo!()
+            } else {
+                self.parse_fun_decl()?;
+            }
+        }
+        let span = Span::new(0, self.text.len());
+        self.insert_item(0, ItemKind::Module, span);
+        Ok(())
     }
+
+    pub fn parse_fun_decl(&mut self) -> ParseResult {
+        let i = self.items.len();
+        let start = self.parse_atom()?.start;
+        self.parse_args()?;
+        // TODO: guard, clause
+        self.expect_symbol("->")?;
+        // TODO: exprs
+        let end = self.expect_symbol(".")?.end;
+
+        let span = Span::new(start, end);
+        self.insert_item(i, ItemKind::FunDecl, span);
+        Ok(())
+    }
+
+    pub fn parse_atom(&mut self) -> ParseResult<Span> {
+        let t = self.next_token()?;
+        if t.kind != TokenKind::Atom {
+            return Err(ParseError::new(t.span, "not an atom token"));
+        }
+        self.push_item(ItemKind::Atom, t.span);
+        Ok(t.span)
+    }
+
+    /*    fn parse_args(&mut self) -> ParseResult<Span> {
+        self.expect_symbol("(")?;
+        if !self.is_next_symbol(")") {
+            loop {
+                self.parse_expr()?;
+                if !self.is_next_symbol(",") {
+                    break;
+                }
+                let _ = self.next_token()?;
+            }
+        }
+        self.expect_symbol(")")
+    }*/
 
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
