@@ -222,6 +222,8 @@ impl<'text> Parser<'text> {
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
             self.parse_module_fun_call(i)
+        } else if self.is_next_symbol("=") {
+            self.parse_match(i)
         } else if self.is_next_symbol("?=") {
             self.parse_maybe_match(i)
         } else {
@@ -281,7 +283,14 @@ impl<'text> Parser<'text> {
     fn parse_maybe_match(&mut self, i: usize) -> ParseResult {
         let _ = self.next_token()?; // '?='
         self.parse_expr()?;
-        self.insert_item2(i, ItemKind::MaybeExpr);
+        self.insert_item2(i, ItemKind::MaybeMatch);
+        Ok(())
+    }
+
+    fn parse_match(&mut self, i: usize) -> ParseResult {
+        let _ = self.next_token()?; // '='
+        self.parse_expr()?;
+        self.insert_item2(i, ItemKind::Match);
         Ok(())
     }
 

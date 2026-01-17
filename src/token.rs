@@ -19,7 +19,10 @@ impl Token {
         }
 
         // TODO: add other kw / symbol
-        matches!(self.text(text), "*" | "+" | "-" | "orelse" | "andalso")
+        matches!(
+            self.text(text),
+            "*" | "+" | "-" | "|" | "orelse" | "andalso"
+        )
     }
 }
 
