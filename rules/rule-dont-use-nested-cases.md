@@ -1,4 +1,4 @@
-# RULE: TODO
+# RULE: Don't Use Nested Cases, Use `maybe` Instead
 
 - CONTEXT: EXPR
 
@@ -38,7 +38,7 @@ maybe
 else
   {tag0, ErrorPattern0} ->
     '...1';
-  {ta7g1, ErrorPattern1} ->
+  {tag1, ErrorPattern1} ->
     '...2'
 end.
 ```
