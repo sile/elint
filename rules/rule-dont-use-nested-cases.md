@@ -13,7 +13,7 @@ case Value0 of
       OkPattern1 ->
           '...0';
       ErrorPattern1 -> 
-          '...1';
+          '...1'
     end;
   ErrorPattern0 -> 
       '...2'
