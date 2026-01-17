@@ -4,95 +4,42 @@ use crate::parse::ParseResult;
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub title: String,
-    pub ng: NgRule,
-    pub ok: Option<OkRule>,
+    pub full_text: String,
+    pub ng_pattern: NgPattern,
 }
 
 impl Rule {
     pub fn parse(text: &str) -> ParseResult<Self> {
+        let full_text = text.to_owned();
         let text = text.strip_prefix("# RULE:").expect("TODO");
         let (title, text) = text.trim().split_once('\n').expect("TODO");
         let title = title.trim().to_owned();
 
-        let text = text.split_once("## NG\n").expect("TODO").1;
-        if let Some((ng_text, ok_text)) = text.split_once("\n## OK\n") {
-            Ok(Self {
-                title,
-                ng: NgRule::parse(ng_text.trim())?,
-                ok: Some(OkRule::parse(ok_text.trim())?),
-            })
-        } else {
-            Ok(Self {
-                title,
-                ng: NgRule::parse(text.trim())?,
-                ok: None,
-            })
-        }
+        let code = text
+            .split_once("\n```erlang\n")
+            .expect("TODO")
+            .1
+            .split_once("\n```\n")
+            .expect("TODO")
+            .0;
+
+        Ok(Self {
+            title,
+            full_text,
+            ng_pattern: NgPattern::parse(code)?,
+        })
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NgRule {
-    pub contents: Vec<RuleContent>,
-}
-
-impl NgRule {
-    pub fn parse(mut text: &str) -> ParseResult<Self> {
-        let mut contents = Vec::new();
-        while !text.is_empty() {
-            let Some((t0, t1)) = text.split_once("```erlang\n") else {
-                contents.push(RuleContent::Text(text.to_owned()));
-                break;
-            };
-            contents.push(RuleContent::Text(t0.to_owned()));
-
-            let (code, remaining) = t1.split_once("```").expect("bug");
-            contents.push(RuleContent::Code(RulePattern::parse(code)?));
-            text = remaining.trim();
-        }
-        Ok(Self { contents })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct OkRule {
-    pub contents: Vec<RuleContent>,
-}
-
-impl OkRule {
-    pub fn parse(mut text: &str) -> ParseResult<Self> {
-        let mut contents = Vec::new();
-        while !text.is_empty() {
-            let Some((t0, t1)) = text.split_once("```erlang\n") else {
-                contents.push(RuleContent::Text(text.to_owned()));
-                break;
-            };
-            contents.push(RuleContent::Text(t0.to_owned()));
-
-            let (code, remaining) = t1.split_once("```").expect("bug");
-            contents.push(RuleContent::Code(RulePattern::parse(code)?));
-            text = remaining.trim();
-        }
-        Ok(Self { contents })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum RuleContent {
-    Text(String),
-    Code(RulePattern),
-}
-
-#[derive(Debug, Clone)]
-pub struct RulePattern {
+pub struct NgPattern {
     pub text: String,
     pub items: Vec<Item>,
     pub comments: Vec<Item>,
 }
 
-impl RulePattern {
+impl NgPattern {
     pub fn parse(text: &str) -> ParseResult<Self> {
-        // TODO: other contexts
         let tokens = crate::token::tokenize(text).expect("TODO");
         let mut parser = crate::parse::Parser::new(text, tokens);
         parser.parse_expr()?;
