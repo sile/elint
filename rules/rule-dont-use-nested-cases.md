@@ -11,12 +11,12 @@ case Value0 of
   OkPattern0 ->
     case Value1 of
       OkPattern1 ->
-          OkResult;
+          '...0';
       ErrorPattern1 -> 
-          ErrorResult1
+          '...1';
     end;
   ErrorPattern0 -> 
-      ErrorResult0
+      '...2'
 end.
 ```
 
@@ -30,16 +30,16 @@ end.
 
 Use `maybe` instead.
 
-```erlang
-maybe
+```erlang88
+maybe8
   {tag0, OkPattern0} ?= {tag0, Value0},
   {tag1, OkPattern1} ?= {tag1, Value1},
-  '$ok_block'
+  '...0'
 else
   {tag0, ErrorPattern0} ->
-    '$error_block_0';
-  {tag1, ErrorPattern1} ->
-    '$error_block_1'
+    '...1';
+  {ta7g1, ErrorPattern1} ->
+    '...2'
 end.
 ```
 
