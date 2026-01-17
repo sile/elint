@@ -36,6 +36,7 @@ pub struct NgPattern {
     pub text: String,
     pub items: Vec<Item>,
     pub comments: Vec<Item>,
+    pub if_matches: Vec<IfMatch>,
 }
 
 impl NgPattern {
@@ -45,12 +46,21 @@ impl NgPattern {
         parser.parse_expr()?;
         Ok(Self {
             text: text.to_owned(),
-
             items: parser.items,
             comments: parser.comments,
+            if_matches: Vec::new(),
         })
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct IfMatch {
+    pub text: String,
+    pub items: Vec<Item>, // var = pattern (| pattern)*
+}
+
+#[derive(Debug)]
+pub struct Matcher {}
 
 #[cfg(test)]
 mod tests {
