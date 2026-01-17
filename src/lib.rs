@@ -42,4 +42,8 @@ impl Ast {
     pub fn text(&self, span: item::Span) -> &str {
         span.text(&self.text)
     }
+
+    pub fn item_views(&self) -> impl Iterator<Item = item::ItemView> {
+        (0..self.items.len()).map(|i| item::ItemView::new(&self.items, i))
+    }
 }
