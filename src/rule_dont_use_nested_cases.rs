@@ -26,13 +26,39 @@ fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
     for clause in v.clauses() {
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
-            ok_body=Some(clause.body());
+            ok_body = Some(clause.body());
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
         }
     }
 
-    if let Some(body)=ok_body && has_error {
+    if let Some(body) = ok_body
+        && has_error
+    {
+        check_nested_case(ast, body)?;
+    }
+
+    Ok(())
+}
+
+fn check_nested_case(ast: &Ast, body: item::ItemsView) -> CheckResult {
+    let v = body.last().expect("bug");
+    let Ok(v) = item::CaseView::new(v) else {
+        return Ok(());
+    };
+
+    let mut has_ok = false;
+    let mut has_error = false;
+    for clause in v.clauses() {
+        let p = clause.pattern();
+        if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
+            has_ok = true;
+        } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
+            has_error = true;
+        }
+    }
+
+    if has_ok && has_error {
         todo!()
     }
 
