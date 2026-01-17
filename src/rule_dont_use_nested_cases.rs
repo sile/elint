@@ -21,18 +21,18 @@ fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
         return Ok(());
     }
 
-    let mut has_ok = false;
+    let mut ok_body = None;
     let mut has_error = false;
     for clause in v.clauses() {
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
-            has_ok = true;
+            ok_body=Some(clause.body());
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
         }
     }
 
-    if has_ok && has_error {
+    if let Some(body)=ok_body && has_error {
         todo!()
     }
 
