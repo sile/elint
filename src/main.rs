@@ -28,8 +28,16 @@ fn main() -> noargs::Result<()> {
         return Ok(());
     }
 
-    let code = std::fs::read_to_string(&path)?;
-    elint::parse_code(&code)?;
+    let text = std::fs::read_to_string(&path)?;
+    let tokens = elint::token::tokenize(&text)?;
+    let mut parser = elint::parse::Parser::new(&text, tokens);
+    parser.parse_module()?;
+
+    let ast = elint::Ast {
+        text: text.clone(),
+        items: parser.items,
+    };
+    elint::rule_dont_use_nested_cases::check(&ast)?;
 
     Ok(())
 }
