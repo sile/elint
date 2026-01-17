@@ -78,6 +78,7 @@ pub enum RuleContent {
 
 #[derive(Debug, Clone)]
 pub struct RulePattern {
+    pub text: String,
     pub contexts: Vec<Context>,
     pub items: Vec<Item>,
     pub comments: Vec<Item>,
@@ -85,7 +86,16 @@ pub struct RulePattern {
 
 impl RulePattern {
     pub fn parse(text: &str) -> ParseResult<Self> {
-        todo!()
+        // TODO: other contexts
+        let tokens = crate::token::tokenize(text).expect("TODO");
+        let mut parser = crate::parse::Parser::new(text, tokens);
+        parser.parse_expr()?;
+        Ok(Self {
+            text: text.to_owned(),
+            contexts: vec![Context::Expr],
+            items: parser.items,
+            comments: parser.comments,
+        })
     }
 }
 
