@@ -31,11 +31,6 @@ impl Rule {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Context {
-    Expr,
-}
-
 #[derive(Debug, Clone)]
 pub struct NgRule {
     pub contents: Vec<RuleContent>,
@@ -91,7 +86,6 @@ pub enum RuleContent {
 #[derive(Debug, Clone)]
 pub struct RulePattern {
     pub text: String,
-    pub contexts: Vec<Context>,
     pub items: Vec<Item>,
     pub comments: Vec<Item>,
 }
@@ -104,7 +98,7 @@ impl RulePattern {
         parser.parse_expr()?;
         Ok(Self {
             text: text.to_owned(),
-            contexts: vec![Context::Expr],
+
             items: parser.items,
             comments: parser.comments,
         })

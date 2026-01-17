@@ -201,6 +201,12 @@ impl<'text> Parser<'text> {
         self.items.insert(i, Item::new(kind, span));
     }
 
+    fn insert_item2(&mut self, i: usize, kind: ItemKind) {
+        let start = self.items[i].span.start;
+        let span = self.span_finish(start);
+        self.items.insert(i, Item::new(kind, span));
+    }
+
     fn parse_binary_op_item(&mut self) -> ParseResult<()> {
         let t = self.next_token()?;
         if !t.is_binary_op(self.text) {
@@ -210,11 +216,14 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    // TODO: rename
     fn parse_expr_item(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
             self.parse_module_fun_call(i)
+        } else if self.is_next_symbol("?=") {
+            self.parse_maybe_match(i)
         } else {
             Ok(())
         }
@@ -266,6 +275,13 @@ impl<'text> Parser<'text> {
         let start = self.items[module_item_i].span.start;
         let span = Span::new(start, last.end);
         self.insert_item(module_item_i, ItemKind::ModuleFunCall, span);
+        Ok(())
+    }
+
+    fn parse_maybe_match(&mut self, i: usize) -> ParseResult {
+        let _ = self.next_token()?; // '?='
+        self.parse_expr()?;
+        self.insert_item2(i, ItemKind::MaybeExpr);
         Ok(())
     }
 
