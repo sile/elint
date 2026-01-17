@@ -44,4 +44,4 @@ end.
 ```
 
 NOTE:
-- Tag names should concise and reflect the context
+- Tag names should be concise and reflect the context
