@@ -7,16 +7,16 @@
 Nested `case`s. 
 
 ```erlang
-case '$0' of
-  {ok, '$ok_0'} ->
-    case '$1' of
-      {ok, '$ok_1'} ->
-          '$ok_block';
-      '$error_1' -> 
-          '$error_block1'
+case Value0 of
+  OkPattern0 ->
+    case Value1 of
+      OkPattern1 ->
+          OkResult;
+      ErrorPattern1 -> 
+          ErrorResult1
     end;
-  '$error_0' -> 
-      '$error_block_0'
+  ErrorPattern0 -> 
+      ErrorResult0
 end.
 ```
 
@@ -26,13 +26,16 @@ Use `maybe` instead.
 
 ```erlang
 maybe
-  {tag0, {ok, '$ok_0'}} ?= {tag0, '$0'},
-  {tag1, {ok, '$ok_1'}} ?= {tag1, '$1'},
+  {tag0, P0_ok} ?= {tag0, V0},
+  {tag1, P1_ok} ?= {tag1, V1},
   '$ok_block'
 else
-  {tag0, '$error_0'} ->
+  {tag0, P0_error} ->
     '$error_block_0';
-  {tag1, '$error_1'} ->
+  {tag1, P1_error} ->
     '$error_block_1'
 end.
 ```
+
+NOTE:
+- Tag names should concise and reflect the context
