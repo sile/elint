@@ -8,9 +8,9 @@ Nested `case`s.
 
 ```erlang
 case Value0 of
-  OkPattern0 ->
+  OkPattern0 ->  % IF_MATCH: OkPattern0 = ok | {ok, '...'}
     case Value1 of
-      OkPattern1 ->
+      OkPattern1 ->  % IF_MATCH: OkPattern1 = ok | {ok, '...'}
           '...0';
       ErrorPattern1 -> 
           '...1'
@@ -19,11 +19,6 @@ case Value0 of
       '...2'
 end.
 ```
-
-### WHEN: `OkPattern0`, `OkPattern1`
-
-- MATCH: `ok`
-- MATCH: `{ok, '...'}`
 
 ## OK
 
