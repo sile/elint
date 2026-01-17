@@ -343,3 +343,39 @@ impl<'a> ElseClauseView<'a> {
         self.0.clone().nth(2).expect("bug").children()
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct MatchView<'a>(ItemsView<'a>);
+
+impl<'a> MatchView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::Match)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn pattern(&self) -> ItemView<'a> {
+        self.0.clone().next().expect("bug")
+    }
+
+    pub fn value(&self) -> ItemView<'a> {
+        self.0.clone().nth(1).expect("bug")
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MaybeMatchView<'a>(ItemsView<'a>);
+
+impl<'a> MaybeMatchView<'a> {
+    pub fn new(item: ItemView<'a>) -> ParseResult<Self> {
+        item.expect_kind(ItemKind::MaybeMatch)?;
+        Ok(Self(item.children()))
+    }
+
+    pub fn pattern(&self) -> ItemView<'a> {
+        self.0.clone().next().expect("bug")
+    }
+
+    pub fn value(&self) -> ItemView<'a> {
+        self.0.clone().nth(1).expect("bug")
+    }
+}
