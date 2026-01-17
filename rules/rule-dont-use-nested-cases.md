@@ -20,11 +20,10 @@ case Value0 of
 end.
 ```
 
-### WHEN: `OkPattern0`, `OkPattern0`
+### WHEN: `OkPattern0`, `OkPattern1`
 
 - MATCH: `ok`
-- IS_TUPLE:
-  - TAG: `ok`
+- MATCH: `{ok, '...'}`
 
 ## OK
 
