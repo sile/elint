@@ -15,7 +15,7 @@ impl Rule {
         let title = title.trim().to_owned();
 
         let text = text.split_once("## NG\n").expect("TODO").1;
-        if let Some((ng_text, ok_text)) = text.split_once("\n## OKn") {
+        if let Some((ng_text, ok_text)) = text.split_once("\n## OK\n") {
             Ok(Self {
                 title,
                 ng: NgRule::parse(ng_text.trim())?,
@@ -65,8 +65,20 @@ pub struct OkRule {
 }
 
 impl OkRule {
-    pub fn parse(text: &str) -> ParseResult<Self> {
-        todo!()
+    pub fn parse(mut text: &str) -> ParseResult<Self> {
+        let mut contents = Vec::new();
+        while !text.is_empty() {
+            let Some((t0, t1)) = text.split_once("```erlang\n") else {
+                contents.push(RuleContent::Text(text.to_owned()));
+                break;
+            };
+            contents.push(RuleContent::Text(t0.to_owned()));
+
+            let (code, remaining) = t1.split_once("```").expect("bug");
+            contents.push(RuleContent::Code(RulePattern::parse(code)?));
+            text = remaining.trim();
+        }
+        Ok(Self { contents })
     }
 }
 
