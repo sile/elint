@@ -1,7 +1,5 @@
 # RULE: Don't Use Nested Cases, Use `maybe` Instead
 
-- CONTEXT: EXPR
-
 ## NG
 
 Nested `case`s. 

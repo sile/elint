@@ -1,7 +1,8 @@
-pub mod ast_expr;
+pub mod ast_expr; // TODO: remove
 pub mod command_parse;
 pub mod item;
 pub mod parse;
+pub mod rule;
 pub mod token;
 
 pub fn parse_code(text: &str) -> Result<Module, ParseError> {
