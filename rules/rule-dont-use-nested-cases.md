@@ -1,6 +1,6 @@
 # RULE: TODO
 
-- Context: expr
+- CONTEXT: EXPR
 
 ## NG
 
@@ -20,19 +20,25 @@ case Value0 of
 end.
 ```
 
+### WHEN: `OkPattern0`, `OkPattern0`
+
+- MATCH: `ok`
+- IS_TUPLE:
+  - TAG: `ok`
+
 ## OK
 
 Use `maybe` instead.
 
 ```erlang
 maybe
-  {tag0, P0_ok} ?= {tag0, V0},
-  {tag1, P1_ok} ?= {tag1, V1},
+  {tag0, OkPattern0} ?= {tag0, Value0},
+  {tag1, OkPattern1} ?= {tag1, Value1},
   '$ok_block'
 else
-  {tag0, P0_error} ->
+  {tag0, ErrorPattern0} ->
     '$error_block_0';
-  {tag1, P1_error} ->
+  {tag1, ErrorPattern1} ->
     '$error_block_1'
 end.
 ```
