@@ -17,5 +17,24 @@ pub fn check(ast: &Ast) -> CheckResult {
 }
 
 fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
-    todo!()
+    if v.clauses().count() != 2 {
+        return Ok(());
+    }
+
+    let mut has_ok = false;
+    let mut has_error = false;
+    for clause in v.clauses() {
+        let p = clause.pattern();
+        if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
+            has_ok = true;
+        } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
+            has_error = true;
+        }
+    }
+
+    if has_ok && has_error {
+        todo!()
+    }
+
+    Ok(())
 }

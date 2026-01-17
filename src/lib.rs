@@ -43,7 +43,18 @@ impl Ast {
         span.text(&self.text)
     }
 
-    pub fn item_views(&self) -> impl Iterator<Item = item::ItemView> {
+    pub fn item_views(&self) -> impl Iterator<Item = item::ItemView<'_>> {
         (0..self.items.len()).map(|i| item::ItemView::new(&self.items, i))
+    }
+
+    pub fn is_atom(&self, t: item::ItemView, name: &str) -> bool {
+        t.kind() == item::ItemKind::Atom && self.text(t.span()) == name
+    }
+
+    pub fn is_tagged_tuple(&self, t: item::ItemView, tag: &str) -> bool {
+        t.kind() == item::ItemKind::Tuple
+            && t.children()
+                .next()
+                .is_some_and(|t| self.text(t.span()) == tag)
     }
 }
