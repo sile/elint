@@ -45,9 +45,15 @@ impl NgRule {
     pub fn parse(mut text: &str) -> ParseResult<Self> {
         let mut contents = Vec::new();
         while !text.is_empty() {
-            let (content, remaining) = RuleContent::parse(text)?;
-            contents.push(content);
-            text = remaining;
+            let Some((t0, t1)) = text.split_once("```erlang\n") else {
+                contents.push(RuleContent::Text(text.to_owned()));
+                break;
+            };
+            contents.push(RuleContent::Text(t0.to_owned()));
+
+            let (code, remaining) = t1.split_once("```").expect("bug");
+            contents.push(RuleContent::Code(RulePattern::parse(code)?));
+            text = remaining.trim();
         }
         Ok(Self { contents })
     }
@@ -70,17 +76,17 @@ pub enum RuleContent {
     Code(RulePattern),
 }
 
-impl RuleContent {
-    pub fn parse(text: &str) -> ParseResult<(Self, &str)> {
-        todo!()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct RulePattern {
     pub contexts: Vec<Context>,
     pub items: Vec<Item>,
     pub comments: Vec<Item>,
+}
+
+impl RulePattern {
+    pub fn parse(text: &str) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
