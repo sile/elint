@@ -13,8 +13,21 @@ impl Rule {
         let text = text.strip_prefix("# RULE:").expect("TODO");
         let (title, text) = text.trim().split_once('\n').expect("TODO");
         let title = title.trim().to_owned();
-        dbg!(title);
-        todo!()
+
+        let text = text.split_once("## NG\n").expect("TODO").1;
+        if let Some((ng_text, ok_text)) = text.split_once("\n## OKn") {
+            Ok(Self {
+                title,
+                ng: NgRule::parse(ng_text.trim())?,
+                ok: Some(OkRule::parse(ok_text.trim())?),
+            })
+        } else {
+            Ok(Self {
+                title,
+                ng: NgRule::parse(text.trim())?,
+                ok: None,
+            })
+        }
     }
 }
 
