@@ -44,11 +44,21 @@ impl NgPattern {
         let tokens = crate::token::tokenize(text).expect("TODO");
         let mut parser = crate::parse::Parser::new(text, tokens);
         parser.parse_expr()?;
+
+        let mut if_matches = Vec::new();
+        for comment in &parser.comments {
+            let comment = comment.text(text).trim_start_matches('%').trim();
+
+            if let Some(s) = comment.strip_prefix("IF_MATCH:") {
+                if_matches.push(IfMatch::parse(s)?);
+            }
+        }
+
         Ok(Self {
             text: text.to_owned(),
             items: parser.items,
             comments: parser.comments,
-            if_matches: Vec::new(),
+            if_matches,
         })
     }
 }
@@ -57,6 +67,20 @@ impl NgPattern {
 pub struct IfMatch {
     pub text: String,
     pub items: Vec<Item>, // var = pattern (| pattern)*
+}
+
+impl IfMatch {
+    pub fn parse(text: &str) -> ParseResult<Self> {
+        let tokens = crate::token::tokenize(text).expect("TODO");
+        let mut parser = crate::parse::Parser::new(text, tokens);
+        parser.parse_expr()?;
+
+        // todo: validate
+        Ok(Self {
+            text: text.to_owned(),
+            items: parser.items,
+        })
+    }
 }
 
 #[derive(Debug)]
