@@ -30,8 +30,8 @@ end.
 
 Use `maybe` instead.
 
-```erlang88
-maybe8
+```erlang
+maybe
   {tag0, OkPattern0} ?= {tag0, Value0},
   {tag1, OkPattern1} ?= {tag1, Value1},
   '...0'
