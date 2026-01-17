@@ -41,15 +41,39 @@ pub struct NgRule {
     pub contents: Vec<RuleContent>,
 }
 
+impl NgRule {
+    pub fn parse(mut text: &str) -> ParseResult<Self> {
+        let mut contents = Vec::new();
+        while !text.is_empty() {
+            let (content, remaining) = RuleContent::parse(text)?;
+            contents.push(content);
+            text = remaining;
+        }
+        Ok(Self { contents })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct OkRule {
     pub contents: Vec<RuleContent>,
+}
+
+impl OkRule {
+    pub fn parse(text: &str) -> ParseResult<Self> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum RuleContent {
     Text(String),
     Code(RulePattern),
+}
+
+impl RuleContent {
+    pub fn parse(text: &str) -> ParseResult<(Self, &str)> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone)]
