@@ -1,4 +1,4 @@
-use crate::item::Item;
+use crate::item::{Item, ItemKind};
 use crate::parse::ParseResult;
 
 #[derive(Debug, Clone)]
@@ -75,7 +75,10 @@ impl IfMatch {
         let mut parser = crate::parse::Parser::new(text, tokens);
         parser.parse_expr()?;
 
-        // todo: validate
+        // TODO
+        assert_eq!(parser.items[0].kind, ItemKind::Match);
+        assert_eq!(parser.items[1].kind, ItemKind::Variable);
+
         Ok(Self {
             text: text.to_owned(),
             items: parser.items,
