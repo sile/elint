@@ -1,6 +1,7 @@
 pub mod command_parse;
 pub mod item;
 pub mod parse;
+pub mod rule_dont_use_nested_cases;
 pub mod token;
 
 pub fn parse_code(text: &str) -> Result<(), ParseError> {
@@ -36,3 +37,9 @@ impl std::error::Error for ParseError {
         }
     }
 }
+
+pub type CheckResult<T = ()> = Result<T, CheckError>;
+pub type CheckError = ParseError;
+
+#[derive(Debug)]
+pub struct Ast {}
