@@ -1,11 +1,9 @@
-pub mod ast_expr; // TODO: remove
 pub mod command_parse;
 pub mod item;
 pub mod parse;
-pub mod rule;
 pub mod token;
 
-pub fn parse_code(text: &str) -> Result<Module, ParseError> {
+pub fn parse_code(text: &str) -> Result<(), ParseError> {
     let lexer = erl_tokenize::Lexer::new(text);
 
     let tokens: Result<Vec<_>, _> = lexer
@@ -38,6 +36,3 @@ impl std::error::Error for ParseError {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct Module;
