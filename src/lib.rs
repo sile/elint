@@ -42,4 +42,17 @@ pub type CheckResult<T = ()> = Result<T, CheckError>;
 pub type CheckError = ParseError;
 
 #[derive(Debug)]
-pub struct Ast {}
+pub struct Ast {
+    pub text: String,
+    pub items: Vec<item::Item>,
+}
+
+impl Ast {
+    pub fn root(&self) -> item::ItemView<'_> {
+        item::ItemView::new(&self.items, 0)
+    }
+
+    pub fn text(&self, span: item::Span) -> &str {
+        span.text(&self.text)
+    }
+}
