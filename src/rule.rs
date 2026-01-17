@@ -1,8 +1,15 @@
+use crate::item::Item;
+
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub title: String,
     pub ng: NgRule,
     pub ok: Option<OkRule>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Context {
+    Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -22,4 +29,8 @@ pub enum RuleContent {
 }
 
 #[derive(Debug, Clone)]
-pub struct RulePattern {}
+pub struct RulePattern {
+    pub contexts: Vec<Context>,
+    pub items: Vec<Item>,
+    pub comments: Vec<Item>,
+}
