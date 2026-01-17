@@ -48,7 +48,7 @@ impl<'text> Parser<'text> {
 
         Self {
             items: Vec::new(),
-            comments: Vec::new(),
+            comments,
             text,
             tokens,
             token_i: 0,
