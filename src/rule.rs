@@ -3,7 +3,6 @@ use crate::parse::ParseResult;
 
 #[derive(Debug, Clone)]
 pub struct Rule {
-    pub text: String,
     pub title: String,
     pub ng: NgRule,
     pub ok: Option<OkRule>,
@@ -11,6 +10,10 @@ pub struct Rule {
 
 impl Rule {
     pub fn parse(text: &str) -> ParseResult<Self> {
+        let text = text.strip_prefix("# RULE:").expect("TODO");
+        let (title, text) = text.trim().split_once('\n').expect("TODO");
+        let title = title.trim().to_owned();
+        dbg!(title);
         todo!()
     }
 }
