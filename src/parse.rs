@@ -168,12 +168,23 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    pub fn parse_guard(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        if self.expect_optional_keyword("when") {
+            //
+            todo!()
+        }
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Guard, span);
+        Ok(())
+    }
+
     pub fn parse_fun_clause(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         let start = self.parse_atom()?.start;
         self.parse_args()?;
-        // TODO: guard
-        self.push_item(ItemKind::Guard, self.next_empty_span());
+        self.parse_guard()?;
         self.expect_symbol("->")?;
         self.parse_body()?;
         let span = self.span_finish(start);
@@ -340,6 +351,15 @@ impl<'text> Parser<'text> {
 
     fn expect_optional_symbol(&mut self, name: &str) -> bool {
         if self.is_next_symbol(name) {
+            self.token_i += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn expect_optional_keyword(&mut self, name: &str) -> bool {
+        if self.is_next_keyword(name) {
             self.token_i += 1;
             true
         } else {
