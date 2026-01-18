@@ -50,6 +50,7 @@ pub enum ItemKind {
     ElseClause,
     Tuple,
     List,
+    Paren,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

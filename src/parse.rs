@@ -345,6 +345,19 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    fn parse_paren(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_symbol("(")?;
+        if !self.is_next_symbol(")") {
+            self.parse_expr()?;
+        }
+        self.expect_symbol(")")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Paren, span);
+        Ok(())
+    }
+
     fn parse_list(&mut self) -> ParseResult {
         // TODO: impropet list, list comprehension
         let (i, start) = self.span_start();
@@ -588,6 +601,7 @@ impl<'text> Parser<'text> {
             TokenKind::Symbol => {
                 self.token_i -= 1;
                 match t.text(self.text) {
+                    "(" => self.parse_paren()?,
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
                     "[" => self.parse_list()?,
                     "<<" => self.parse_binary()?,
