@@ -263,11 +263,26 @@ impl<'text> Parser<'text> {
             self.parse_match(i)
         } else if self.is_next_symbol("?=") {
             self.parse_maybe_match(i)
+        } else if self.is_next_symbol("#")
+            && self.is_nth_token_kind(1, TokenKind::Atom)
+            && self.is_nth_token(2, TokenKind::Symbol, ".")
+        {
+            self.parse_record_field_access(i)
         } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
             self.parse_record_update(i)
         } else {
             Ok(())
         }
+    }
+
+    fn parse_record_field_access(&mut self, i: usize) -> ParseResult {
+        let _ = self.next_token()?; // '#'
+        self.parse_atom()?; // record name
+        self.expect_symbol(".")?;
+        self.parse_atom()?; // field name
+
+        self.insert_item2(i, ItemKind::RecordFieldAccess);
+        Ok(())
     }
 
     fn parse_record_update(&mut self, i: usize) -> ParseResult {

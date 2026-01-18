@@ -23,6 +23,7 @@ pub enum ItemKind {
     MapCreate,
     RecordCreate,
     RecordUpdate,
+    RecordFieldAccess,
     Binary,
     Attr,
     Match,
