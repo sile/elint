@@ -51,6 +51,8 @@ pub enum ItemKind {
     FunClause,
     AnonymousFun,
     AnonymousFunClause,
+    ModuleFunRef, // fun Mod:Fun/Arity (Mod and Fun could be base expr)
+    FunRef,       // fun Fun/Arity
     Guard,
     Body,
     None,

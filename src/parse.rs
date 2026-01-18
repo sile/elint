@@ -758,6 +758,11 @@ impl<'text> Parser<'text> {
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
                         self.parse_anonymous_fun()?
                     }
+                    "fun" if self.is_nth_token(2, TokenKind::Symbol, "(") => {
+                        // named fun
+                        return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}")));
+                    }
+                    "fun" => self.parse_fun_ref()?,
                     "not" => self.parse_unary_op_expr()?,
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
@@ -780,6 +785,41 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_fun_ref(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("fun")?;
+
+        // Parse the first part (either module or function name)
+        self.parse_base_expr_item()?;
+
+        // Check if it's a module:fun/arity or just fun/arity
+        if self.is_next_symbol(":") {
+            self.expect_symbol(":")?;
+            self.parse_base_expr_item()?; // function name
+            self.expect_symbol("/")?;
+            let t = self.next_token()?;
+            if t.kind != TokenKind::Integer {
+                return Err(ParseError::new(t.span, "expected integer arity"));
+            }
+            self.push_item(ItemKind::Integer, t.span);
+
+            let span = self.span_finish(start);
+            self.insert_item(i, ItemKind::ModuleFunRef, span);
+        } else {
+            self.expect_symbol("/")?;
+            let t = self.next_token()?;
+            if t.kind != TokenKind::Integer {
+                return Err(ParseError::new(t.span, "expected integer arity"));
+            }
+            self.push_item(ItemKind::Integer, t.span);
+
+            let span = self.span_finish(start);
+            self.insert_item(i, ItemKind::FunRef, span);
+        }
+
         Ok(())
     }
 
