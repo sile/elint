@@ -240,6 +240,8 @@ impl<'text> Parser<'text> {
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
             self.parse_module_fun_call(i)
+        } else if self.is_next_symbol("(") {
+            self.parse_fun_call(i)
         } else if self.is_next_symbol("=") {
             self.parse_match(i)
         } else if self.is_next_symbol("?=") {
@@ -295,6 +297,12 @@ impl<'text> Parser<'text> {
         let start = self.items[module_item_i].span.start;
         let span = Span::new(start, last.end);
         self.insert_item(module_item_i, ItemKind::ModuleFunCall, span);
+        Ok(())
+    }
+
+    fn parse_fun_call(&mut self, i: usize) -> ParseResult {
+        self.parse_args()?; // (...)
+        self.insert_item2(i, ItemKind::FunCall);
         Ok(())
     }
 
@@ -459,20 +467,14 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "maybe" => self.parse_maybe_expr()?,
-                    _ => todo!(
-                        "Define handling for Keyword and Symbol tokens: {}",
-                        t.text(self.text)
-                    ),
+                    _ => return Err(ParseError::new(self.last_span(), "TODO")),
                 }
             }
             TokenKind::Symbol => {
                 self.token_i -= 1;
                 match t.text(self.text) {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
-                    _ => todo!(
-                        "Define handling for Keyword and Symbol tokens: {}",
-                        t.text(self.text)
-                    ),
+                    _ => return Err(ParseError::new(self.last_span(), "TODO")),
                 }
             }
         }

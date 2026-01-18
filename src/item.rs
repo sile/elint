@@ -32,6 +32,7 @@ pub enum ItemKind {
     BinaryOp,
     BinaryOpExprs,
     ModuleFunCall,
+    FunCall,
     Args,
     Module,
     FunDecl,
