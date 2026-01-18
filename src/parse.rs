@@ -695,6 +695,7 @@ impl<'text> Parser<'text> {
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
                         self.parse_anonymous_fun()?
                     }
+                    "not" => self.parse_unary_op_expr()?,
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
@@ -747,6 +748,15 @@ impl<'text> Parser<'text> {
 
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::AnonymousFunClause, span);
+        Ok(())
+    }
+
+    fn parse_unary_op_expr(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+        self.expect_keyword("not")?;
+        self.parse_expr_item()?;
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::UnaryOpExpr, span);
         Ok(())
     }
 }

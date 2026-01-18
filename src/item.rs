@@ -39,6 +39,7 @@ pub enum ItemKind {
     Comment,
     BinaryOp,
     BinaryOpExprs,
+    UnaryOpExpr,
     ModuleFunCall,
     FunCall,
     Args,
