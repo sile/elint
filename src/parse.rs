@@ -170,10 +170,12 @@ impl<'text> Parser<'text> {
 
     pub fn parse_guard(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
-        if self.expect_optional_keyword("when") {
-            //
-            todo!()
+        if !self.expect_optional_keyword("when") {
+            self.push_item(ItemKind::Guard, self.next_empty_span());
+            return Ok(());
         }
+        //
+        todo!();
 
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::Guard, span);
