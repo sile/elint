@@ -42,9 +42,11 @@ fn main() -> noargs::Result<()> {
             let text = std::fs::read_to_string(&path)?;
             let tokens = elint::token::tokenize(&text)?;
             let mut parser = elint::parse::Parser::new(&text, tokens);
-            parser
-                .parse_module()
-                .inspect_err(|_| eprintln!("FILE: {}", path.display()))?;
+            parser.parse_module().inspect_err(|e| {
+                let (line, column, context_lines) = get_error_context(e.span.start, &text);
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+            })?;
 
             let ast = elint::Ast {
                 text: text.clone(),
