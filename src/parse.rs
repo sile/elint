@@ -284,6 +284,28 @@ impl<'text> Parser<'text> {
         Ok(last)
     }
 
+    fn parse_struct_create(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_symbol("#")?;
+        self.parse_atom()?; // struct name
+        self.expect_symbol("{")?;
+        if !self.is_next_symbol("}") {
+            loop {
+                self.parse_atom()?; // field name
+                self.expect_symbol("=")?;
+                self.parse_expr()?; // field value
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("}")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::StructCreate, span);
+        Ok(())
+    }
+
     fn parse_map_create(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
         self.expect_symbol("#")?;
@@ -426,6 +448,12 @@ impl<'text> Parser<'text> {
             .is_some_and(|t| t.kind == kind && t.text(self.text) == name)
     }
 
+    fn is_nth_token_kind(&self, n: usize, kind: TokenKind) -> bool {
+        self.tokens
+            .get(self.token_i + n)
+            .is_some_and(|t| t.kind == kind)
+    }
+
     fn is_next_keyword(&self, name: &str) -> bool {
         self.peek_token()
             .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
@@ -545,6 +573,9 @@ impl<'text> Parser<'text> {
                     "<<" => self.parse_binary()?,
                     "#" if self.is_nth_token(1, TokenKind::Symbol, "{") => {
                         self.parse_map_create()?
+                    }
+                    "#" if self.is_nth_token_kind(1, TokenKind::Atom) => {
+                        self.parse_struct_create()?
                     }
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
