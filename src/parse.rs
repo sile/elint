@@ -175,8 +175,11 @@ impl<'text> Parser<'text> {
             return Ok(());
         }
 
-        // TODO
-        self.parse_body()?;
+        self.parse_expr()?;
+        while self.is_next_symbol(",") || self.is_next_symbol(";") {
+            let _ = self.next_token();
+            self.parse_expr()?;
+        }
 
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::Guard, span);
