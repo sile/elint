@@ -25,7 +25,35 @@ impl std::error::Error for ParseError {
     }
 }
 
-pub type CheckResult<T = ()> = Result<T, CheckError>;
+#[derive(Debug)]
+pub struct Error {
+    pub span: item::Span,
+    pub message: String,
+}
+
+impl Error {
+    pub fn new(span: item::Span, message: impl Into<String>) -> Self {
+        Self {
+            span,
+            message: message.into(),
+        }
+    }
+
+    pub fn fix_span(mut self, span: item::Span) -> Self {
+        self.span = span;
+        self
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({:?})", self.message, self.span)
+    }
+}
+
+impl std::error::Error for Error {}
+
+pub type CheckResult<T = ()> = Result<T, Error>;
 pub type CheckError = ParseError;
 
 #[derive(Debug)]

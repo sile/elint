@@ -53,6 +53,8 @@ pub struct Span {
 }
 
 impl Span {
+    pub const ZERO: Self = Self::new(0, 0);
+
     pub const fn new(start: usize, end: usize) -> Self {
         Self { start, end }
     }
