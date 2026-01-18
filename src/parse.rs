@@ -775,6 +775,7 @@ impl<'text> Parser<'text> {
                     "#" if self.is_nth_token_kind(1, TokenKind::Atom) => {
                         self.parse_record_create()?
                     }
+                    "-" => self.parse_unary_op_expr()?,
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
