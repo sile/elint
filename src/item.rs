@@ -52,9 +52,8 @@ pub enum ItemKind {
     AnonymousFunClause,
     Guard,
     Body,
-    Try,     // Try (TryCase|TryBody) Clauses<TryCatchClause>? TryAfter?
-    TryCase, // try ... of ... -> ...
-    TryBody, // try ...
+    Try, // Try|TryOf Clauses<TryCatchClause>? TryAfter?
+    TryOf,
     TryCatchClause,
     TryAfter,
     Case, // TODO: CaseExpr

@@ -754,20 +754,17 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
         self.expect_keyword("try")?;
 
+        self.parse_body()?;
+
         // Parse try body or try-of
-        if self.is_next_keyword("of") {
+        let kind = if self.expect_optional_keyword("of") {
             // try ... of ... -> ... (with case clauses)
-            self.parse_body()?;
-            self.expect_keyword("of")?;
             self.parse_case_clauses()?;
-            let try_item_i = self.items.len();
-            self.insert_item2(i, ItemKind::TryCase);
+            ItemKind::TryOf
         } else {
             // try ... (without case clauses)
-            self.parse_body()?;
-            let try_item_i = self.items.len();
-            self.insert_item2(i, ItemKind::TryBody);
-        }
+            ItemKind::Try
+        };
 
         // Parse optional catch clauses
         if self.is_next_keyword("catch") {
@@ -787,7 +784,7 @@ impl<'text> Parser<'text> {
         self.expect_keyword("end")?;
 
         let span = self.span_finish(start);
-        self.insert_item(i, ItemKind::Try, span);
+        self.insert_item(i, kind, span);
         Ok(())
     }
 
