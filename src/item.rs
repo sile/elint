@@ -53,6 +53,8 @@ pub enum ItemKind {
     Guard,
     Body,
     None,
+    Receive, // Receive Cluses<CaseClause> ReceiveAfter?
+    ReceiveAfter,
     Try, // Try|TryOf Clauses<TryCatchClause>? TryAfter?
     TryOf,
     TryCatchClause,

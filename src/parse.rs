@@ -732,6 +732,7 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "try" => self.parse_try()?,
+                    "receive" => self.parse_receive()?,
                     "begin" => self.parse_begin()?,
                     "maybe" => self.parse_maybe_expr()?,
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
@@ -758,6 +759,29 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_receive(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("receive")?;
+        self.parse_case_clauses()?;
+
+        // Check for optional 'after' clause
+        if self.expect_optional_keyword("after") {
+            self.parse_expr()?; // timeout expression
+            self.expect_symbol("->")?;
+            self.parse_body()?;
+            let span = self.span_finish(start);
+            self.insert_item(i, ItemKind::ReceiveAfter, span);
+        } else {
+            self.push_none();
+        }
+
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Receive, span);
         Ok(())
     }
 
