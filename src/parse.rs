@@ -345,6 +345,25 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    fn parse_list(&mut self) -> ParseResult {
+        // TODO: impropet list, list comprehension
+        let (i, start) = self.span_start();
+        self.expect_symbol("[")?;
+        if !self.is_next_symbol("]") {
+            loop {
+                self.parse_expr()?;
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("]")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::List, span);
+        Ok(())
+    }
+
     fn parse_tuple<F>(&mut self, f: F) -> ParseResult
     where
         F: Fn(&mut Self) -> ParseResult,
@@ -570,6 +589,7 @@ impl<'text> Parser<'text> {
                 self.token_i -= 1;
                 match t.text(self.text) {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
+                    "[" => self.parse_list()?,
                     "<<" => self.parse_binary()?,
                     "#" if self.is_nth_token(1, TokenKind::Symbol, "{") => {
                         self.parse_map_create()?

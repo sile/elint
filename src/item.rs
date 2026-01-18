@@ -49,6 +49,7 @@ pub enum ItemKind {
     Clauses,
     ElseClause,
     Tuple,
+    List,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
