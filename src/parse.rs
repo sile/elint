@@ -631,6 +631,9 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "maybe" => self.parse_maybe_expr()?,
+                    "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
+                        self.parse_anonymous_fun()?
+                    }
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
@@ -651,6 +654,38 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_anonymous_fun(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("fun")?;
+
+        loop {
+            self.parse_anonymous_fun_clause()?;
+            if !self.is_next_symbol(";") {
+                break;
+            }
+            let _ = self.next_token()?; // consume ';'
+        }
+
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::AnonymousFun, span);
+        Ok(())
+    }
+
+    fn parse_anonymous_fun_clause(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        self.parse_args()?;
+        self.parse_guard()?;
+        self.expect_symbol("->")?;
+        self.parse_body()?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::AnonymousFunClause, span);
         Ok(())
     }
 }

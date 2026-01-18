@@ -42,6 +42,8 @@ pub enum ItemKind {
     Module,
     FunDecl,
     FunClause,
+    AnonymousFun,
+    AnonymousFunClause,
     Guard,
     Body,
     Case, // TODO: CaseExpr
