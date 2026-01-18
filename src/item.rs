@@ -52,6 +52,7 @@ pub enum ItemKind {
     AnonymousFunClause,
     Guard,
     Body,
+    None,
     Try, // Try|TryOf Clauses<TryCatchClause>? TryAfter?
     TryOf,
     TryCatchClause,

@@ -767,18 +767,20 @@ impl<'text> Parser<'text> {
         };
 
         // Parse optional catch clauses
-        if self.is_next_keyword("catch") {
-            self.expect_keyword("catch")?;
+        if self.expect_optional_keyword("catch") {
             self.parse_try_catch_clauses()?;
+        } else {
+            self.push_none();
         }
 
         // Parse optional after clause
-        if self.is_next_keyword("after") {
-            self.expect_keyword("after")?;
+        if self.expect_optional_keyword("after") {
             let (i, start) = self.span_start();
             self.parse_body()?;
             let span = self.span_finish(start);
             self.insert_item(i, ItemKind::TryAfter, span);
+        } else {
+            self.push_none();
         }
 
         self.expect_keyword("end")?;
@@ -786,6 +788,12 @@ impl<'text> Parser<'text> {
         let span = self.span_finish(start);
         self.insert_item(i, kind, span);
         Ok(())
+    }
+
+    fn push_none(&mut self) {
+        let p = self.next_span().start;
+        let span = Span::new(p, p);
+        self.push_item(ItemKind::None, span);
     }
 
     fn parse_try_catch_clauses(&mut self) -> ParseResult<()> {
