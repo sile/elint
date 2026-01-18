@@ -399,6 +399,12 @@ impl<'text> Parser<'text> {
             .is_some_and(|t| t.kind == TokenKind::Symbol && t.text(self.text) == name)
     }
 
+    fn is_nth_token(&self, n: usize, kind: TokenKind, name: &str) -> bool {
+        self.tokens
+            .get(self.token_i + n)
+            .is_some_and(|t| t.kind == kind && t.text(self.text) == name)
+    }
+
     fn is_next_keyword(&self, name: &str) -> bool {
         self.peek_token()
             .is_some_and(|t| t.kind == TokenKind::Keyword && t.text(self.text) == name)
@@ -516,6 +522,9 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
                     "<<" => self.parse_binary()?,
+                    "#" if self.is_nth_token(1, TokenKind::Symbol, "{") => {
+                        self.parse_map_literal()?
+                    }
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
