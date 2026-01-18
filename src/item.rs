@@ -52,6 +52,7 @@ pub enum ItemKind {
     ElseClause,
     Tuple,
     List,
+    ListComprehension,
     Paren,
 }
 

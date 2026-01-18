@@ -39,6 +39,7 @@ fn main() -> noargs::Result<()> {
 
     for path in paths {
         for path in elint::fs::collect_erlang_files(path)? {
+            eprintln!("# {}", path.display());
             let text = std::fs::read_to_string(&path)?;
             let tokens = elint::token::tokenize(&text)?;
             let mut parser = elint::parse::Parser::new(&text, tokens);

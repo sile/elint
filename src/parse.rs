@@ -359,12 +359,21 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_list(&mut self) -> ParseResult {
-        // TODO: impropet list, list comprehension
+        // TODO: impropet list
         let (i, start) = self.span_start();
         self.expect_symbol("[")?;
+
+        let mut kind = ItemKind::List;
+        let mut is_first = true;
         if !self.is_next_symbol("]") {
             loop {
                 self.parse_expr()?;
+                if is_first && self.is_next_symbol("||") {
+                    kind = ItemKind::ListComprehension;
+                    self.parse_comprehension_right()?;
+                    break;
+                }
+                is_first = false;
                 if !self.expect_optional_symbol(",") {
                     break;
                 }
@@ -373,7 +382,7 @@ impl<'text> Parser<'text> {
         self.expect_symbol("]")?;
 
         let span = self.span_finish(start);
-        self.insert_item(i, ItemKind::List, span);
+        self.insert_item(i, kind, span);
         Ok(())
     }
 
