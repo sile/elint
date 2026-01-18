@@ -124,9 +124,23 @@ impl<'text> Parser<'text> {
     pub fn parse_attr(&mut self) -> ParseResult {
         let (_i, start) = self.span_start();
         self.expect_symbol("-")?;
-        while !self.expect_optional_symbol(".") {
-            self.next_token()?;
+        let mut paren_level = 0;
+
+        loop {
+            if self.is_next_symbol("(") {
+                paren_level += 1;
+                self.next_token()?;
+            } else if self.is_next_symbol(")") {
+                paren_level -= 1;
+                self.next_token()?;
+            } else if self.is_next_symbol(".") && paren_level == 0 {
+                self.expect_symbol(".")?;
+                break;
+            } else {
+                self.next_token()?;
+            }
         }
+
         let span = self.span_finish(start);
         self.push_item(ItemKind::Attr, span);
         Ok(())
