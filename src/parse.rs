@@ -208,7 +208,7 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_strings(&mut self, i: usize) -> ParseResult {
-        while self.is_nth_token_kind(1, TokenKind::String) {
+        while self.is_nth_token_kind(0, TokenKind::String) {
             self.next_token()?; // consume the string token
             self.push_item(ItemKind::String, self.last_span());
         }
@@ -282,7 +282,7 @@ impl<'text> Parser<'text> {
         } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
             self.parse_map_update(i)
         } else if self.items[i].kind == ItemKind::String
-            && self.is_nth_token_kind(1, TokenKind::String)
+            && self.is_nth_token_kind(0, TokenKind::String)
         {
             self.parse_strings(i)
         } else {
@@ -380,6 +380,22 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    fn expect_symbol_any(&mut self, names: &[&str]) -> ParseResult<Span> {
+        let t = self.next_token()?;
+        if t.kind == TokenKind::Symbol && names.contains(&t.text(self.text)) {
+            Ok(t.span)
+        } else {
+            Err(ParseError::new(
+                t.span,
+                format!(
+                    "expected one of symbols {}, got '{}'",
+                    names.join(", "),
+                    t.text(self.text)
+                ),
+            ))
+        }
+    }
+
     fn parse_map_create(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
         self.expect_symbol("#")?;
@@ -387,7 +403,8 @@ impl<'text> Parser<'text> {
         if !self.is_next_symbol("}") {
             loop {
                 self.parse_expr()?;
-                self.expect_symbol("=>")?;
+                // TODO: add map_match
+                self.expect_symbol_any(&["=>", ":="])?;
                 self.parse_expr()?;
                 if !self.expect_optional_symbol(",") {
                     break;
