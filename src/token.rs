@@ -18,10 +18,22 @@ impl Token {
             return false;
         }
 
-        // TODO: add other kw / symbol
+        // TODO: add other kw / symbol(erlang)
         matches!(
             self.text(text),
-            "*" | "+" | "-" | "|" | "orelse" | "andalso"
+            "*" | "+"
+                | "++"
+                | "-"
+                | "--"
+                | "/"
+                | "=="
+                | "=:="
+                | "|"
+                | "orelse"
+                | "andalso"
+                | "div"
+                | "rem"
+                | "mod"
         )
     }
 }
