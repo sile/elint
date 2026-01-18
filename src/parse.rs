@@ -174,8 +174,9 @@ impl<'text> Parser<'text> {
             self.push_item(ItemKind::Guard, self.next_empty_span());
             return Ok(());
         }
-        //
-        todo!();
+
+        // TODO
+        self.parse_body()?;
 
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::Guard, span);
