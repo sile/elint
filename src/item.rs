@@ -18,6 +18,7 @@ impl Item {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemKind {
+    Binary,
     Attr,
     Match,
     MaybeMatch,

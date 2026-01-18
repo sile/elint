@@ -270,6 +270,24 @@ impl<'text> Parser<'text> {
         Ok(last)
     }
 
+    fn parse_binary(&mut self) -> ParseResult {
+        let (_i, start) = self.span_start();
+        self.expect_symbol("<<")?;
+        let mut level = 1; // TODO
+        while level > 0 {
+            if self.is_next_symbol("<<") {
+                level += 1;
+            } else if self.is_next_symbol(">>") {
+                level -= 1;
+            }
+            self.next_token()?;
+        }
+
+        let span = self.span_finish(start);
+        self.push_item(ItemKind::Binary, span);
+        Ok(())
+    }
+
     fn parse_tuple<F>(&mut self, f: F) -> ParseResult
     where
         F: Fn(&mut Self) -> ParseResult,
@@ -467,14 +485,15 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "maybe" => self.parse_maybe_expr()?,
-                    _ => return Err(ParseError::new(self.next_span(), "TODO")),
+                    t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
             TokenKind::Symbol => {
                 self.token_i -= 1;
                 match t.text(self.text) {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
-                    _ => return Err(ParseError::new(self.next_span(), "TODO")),
+                    "<<" => self.parse_binary()?,
+                    t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
         }
