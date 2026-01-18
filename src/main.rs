@@ -19,31 +19,44 @@ fn main() -> noargs::Result<()> {
         return Ok(());
     }
 
-    let path: std::path::PathBuf = noargs::arg("PATH")
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    while let Some(path) = noargs::arg("[PATH]..")
         .take(&mut args)
-        .then(|a| a.value().parse())?;
+        .present_and_then(|a| a.value().parse())?
+    {
+        paths.push(path);
+    }
 
     if let Some(help) = args.finish()? {
         print!("{help}");
         return Ok(());
     }
 
-    let text = std::fs::read_to_string(&path)?;
-    let tokens = elint::token::tokenize(&text)?;
-    let mut parser = elint::parse::Parser::new(&text, tokens);
-    parser.parse_module()?;
+    if paths.is_empty() {
+        paths.push("src/".into());
+        paths.push("tests/".into());
+    }
 
-    let ast = elint::Ast {
-        text: text.clone(),
-        items: parser.items,
-    };
-    if let Err((e, lint_name)) = check(&ast) {
-        let (line, column, context_lines) = get_error_context(e.span.start, &text);
-        eprintln!("Lint Error: RULE={lint_name}");
-        eprintln!("  --> {}:{}:{}", path.display(), line, column);
-        eprintln!("{context_lines}");
-        eprintln!("\n{}\n", e.message);
-        std::process::exit(1);
+    for path in paths {
+        for path in elint::fs::collect_erlang_files(path)? {
+            let text = std::fs::read_to_string(&path)?;
+            let tokens = elint::token::tokenize(&text)?;
+            let mut parser = elint::parse::Parser::new(&text, tokens);
+            parser.parse_module()?;
+
+            let ast = elint::Ast {
+                text: text.clone(),
+                items: parser.items,
+            };
+            if let Err((e, lint_name)) = check(&ast) {
+                let (line, column, context_lines) = get_error_context(e.span.start, &text);
+                eprintln!("Lint Error: RULE={lint_name}");
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+                eprintln!("\n{}\n", e.message);
+                std::process::exit(1);
+            }
+        }
     }
 
     Ok(())
