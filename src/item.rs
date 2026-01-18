@@ -3,6 +3,8 @@ use crate::parse::{ParseError, ParseResult};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Item {
     pub kind: ItemKind,
+
+    // TODO: add token index based span (that is monotonically increasing) to support macro expansion
     pub span: Span,
 }
 
