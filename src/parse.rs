@@ -263,9 +263,31 @@ impl<'text> Parser<'text> {
             self.parse_match(i)
         } else if self.is_next_symbol("?=") {
             self.parse_maybe_match(i)
+        } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
+            self.parse_record_update(i)
         } else {
             Ok(())
         }
+    }
+
+    fn parse_record_update(&mut self, i: usize) -> ParseResult {
+        let _ = self.next_token()?; // '#'
+        self.parse_atom()?; // record name
+        self.expect_symbol("{")?;
+        if !self.is_next_symbol("}") {
+            loop {
+                self.parse_atom()?; // field name
+                self.expect_symbol("=")?;
+                self.parse_expr()?; // field value
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("}")?;
+
+        self.insert_item2(i, ItemKind::RecordUpdate);
+        Ok(())
     }
 
     fn parse_args(&mut self) -> ParseResult<Span> {
@@ -287,7 +309,7 @@ impl<'text> Parser<'text> {
         Ok(last)
     }
 
-    fn parse_struct_create(&mut self) -> ParseResult {
+    fn parse_record_create(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
         self.expect_symbol("#")?;
         self.parse_atom()?; // struct name
@@ -305,7 +327,7 @@ impl<'text> Parser<'text> {
         self.expect_symbol("}")?;
 
         let span = self.span_finish(start);
-        self.insert_item(i, ItemKind::StructCreate, span);
+        self.insert_item(i, ItemKind::RecordCreate, span);
         Ok(())
     }
 
@@ -651,7 +673,7 @@ impl<'text> Parser<'text> {
                         self.parse_map_create()?
                     }
                     "#" if self.is_nth_token_kind(1, TokenKind::Atom) => {
-                        self.parse_struct_create()?
+                        self.parse_record_create()?
                     }
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
