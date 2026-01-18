@@ -75,22 +75,13 @@ fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
 
     // Extract context lines (current line + surrounding lines)
     let mut context_lines = String::new();
-    let mut current_line_start = line_start;
-    let mut current_line_num = line;
 
     // Find the start of the current line
-    for (i, ch) in text[..line_start].chars().rev().enumerate() {
+    for ch in text[..line_start].chars().rev() {
         if ch == '\n' {
-            current_line_start = line_start - i;
-            current_line_num -= 1;
             break;
         }
     }
-    current_line_start = if current_line_num == line {
-        line_start
-    } else {
-        current_line_start
-    };
 
     // Build context with line numbers
     let lines: Vec<&str> = text.lines().collect();
