@@ -783,7 +783,8 @@ impl<'text> Parser<'text> {
 
     fn parse_unary_op_expr(&mut self) -> ParseResult<()> {
         let (i, start) = self.span_start();
-        self.expect_keyword("not")?;
+        let t = self.next_token()?;
+        self.push_item(ItemKind::UnaryOp, t.span);
         self.parse_expr_item()?;
         let span = self.span_finish(start);
         self.insert_item(i, ItemKind::UnaryOpExpr, span);

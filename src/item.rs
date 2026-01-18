@@ -40,6 +40,7 @@ pub enum ItemKind {
     Comment,
     BinaryOp,
     BinaryOpExprs,
+    UnaryOp,
     UnaryOpExpr,
     ModuleFunCall,
     FunCall,
@@ -51,6 +52,9 @@ pub enum ItemKind {
     AnonymousFunClause,
     Guard,
     Body,
+    Try,
+    TryOf,
+    CatchClause,
     Case, // TODO: CaseExpr
     CaseClauses,
     CaseClause,
