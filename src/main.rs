@@ -42,7 +42,9 @@ fn main() -> noargs::Result<()> {
             let text = std::fs::read_to_string(&path)?;
             let tokens = elint::token::tokenize(&text)?;
             let mut parser = elint::parse::Parser::new(&text, tokens);
-            parser.parse_module()?;
+            parser
+                .parse_module()
+                .inspect_err(|_| eprintln!("FILE: {}", path.display()))?;
 
             let ast = elint::Ast {
                 text: text.clone(),
