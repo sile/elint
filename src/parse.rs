@@ -813,8 +813,13 @@ impl<'text> Parser<'text> {
     fn parse_try_catch_clause(&mut self) -> ParseResult<()> {
         let (i, start) = self.span_start();
 
-        // Parse exception pattern (e.g., error:Reason or throw:Value)
-        self.parse_pattern()?;
+        self.parse_base_expr_item()?; // TODO: pattern
+        if self.expect_optional_symbol(":") {
+            self.parse_base_expr_item()?;
+        }
+        if self.expect_optional_symbol(":") {
+            self.parse_base_expr_item()?;
+        }
         self.parse_guard()?;
         self.expect_symbol("->")?;
         self.parse_body()?;
