@@ -100,15 +100,25 @@ fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
     let start_idx = current_line_idx.saturating_sub(2);
     let end_idx = (current_line_idx + 3).min(lines.len());
 
+    // Calculate the width needed for line numbers
+    let max_line_num = end_idx;
+    let line_num_width = max_line_num.to_string().len();
+
     for i in start_idx..end_idx {
         let line_num = i + 1;
         let is_error_line = i == current_line_idx;
 
-        context_lines.push_str(&format!(" {} | {}\n", line_num, lines[i]));
+        context_lines.push_str(&format!(
+            " {:width$} | {}\n",
+            line_num,
+            lines[i],
+            width = line_num_width
+        ));
 
         // Show error indicator only on the error line
         if is_error_line {
-            context_lines.push_str(&format!("   | {}^\n", " ".repeat(column.saturating_sub(1))));
+            let padding = " ".repeat(line_num_width + 3 + column);
+            context_lines.push_str(&format!("{padding}^\n"));
         }
     }
 
