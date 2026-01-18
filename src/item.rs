@@ -21,6 +21,7 @@ impl Item {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemKind {
     MapCreate,
+    MapUpdate,
     RecordCreate,
     RecordUpdate,
     RecordFieldAccess,

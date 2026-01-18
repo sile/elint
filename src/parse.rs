@@ -270,9 +270,30 @@ impl<'text> Parser<'text> {
             self.parse_record_field_access(i)
         } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
             self.parse_record_update(i)
+        } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
+            self.parse_map_update(i)
         } else {
             Ok(())
         }
+    }
+
+    fn parse_map_update(&mut self, i: usize) -> ParseResult {
+        let _ = self.next_token()?; // '#'
+        self.expect_symbol("{")?;
+        if !self.is_next_symbol("}") {
+            loop {
+                self.parse_expr()?; // key
+                self.expect_symbol("=>")?;
+                self.parse_expr()?; // value
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("}")?;
+
+        self.insert_item2(i, ItemKind::MapUpdate);
+        Ok(())
     }
 
     fn parse_record_field_access(&mut self, i: usize) -> ParseResult {
