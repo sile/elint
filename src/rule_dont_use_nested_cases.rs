@@ -18,18 +18,19 @@ pub fn check(ast: &Ast) -> Result<(), (crate::Error, &'static str)> {
 }
 
 fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
-    if v.clauses().count() != 2 {
-        return Ok(());
-    }
-
     let mut ok_body = None;
     let mut has_error = false;
     for clause in v.clauses() {
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
+            if ok_body.is_some() {
+                return Ok(());
+            }
             ok_body = Some(clause.body());
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
+        } else {
+            return Ok(());
         }
     }
 
@@ -53,9 +54,14 @@ fn check_nested_case(ast: &Ast, body: item::ItemsView) -> CheckResult {
     for clause in v.clauses() {
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
+            if has_ok {
+                return Ok(());
+            }
             has_ok = true;
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
+        } else {
+            return Ok(());
         }
     }
 
