@@ -815,7 +815,7 @@ impl<'text> Parser<'text> {
 
         self.parse_base_expr_item()?; // TODO: pattern
         if self.expect_optional_symbol(":") {
-            self.parse_base_expr_item()?;
+            self.parse_expr()?; // TODO: pattern
         }
         if self.expect_optional_symbol(":") {
             self.parse_base_expr_item()?;
