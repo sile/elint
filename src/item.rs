@@ -53,6 +53,9 @@ pub enum ItemKind {
     Tuple,
     List,
     ListComprehension,
+    ComprehensionRight,
+    ComprehensionFilter,
+    ComprehensionGenerator,
     Paren,
 }
 

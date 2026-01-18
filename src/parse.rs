@@ -358,6 +358,35 @@ impl<'text> Parser<'text> {
         Ok(())
     }
 
+    fn parse_comprehension_right(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+        self.expect_symbol("||")?;
+
+        loop {
+            let mut kind = ItemKind::ComprehensionFilter;
+            let (i, start) = self.span_start();
+            self.parse_expr()?;
+            if self.peek_token().is_some_and(|t| {
+                t.kind == TokenKind::Symbol
+                    && matches!(t.text(&self.text), "<-" | "<=" | "<:-" | "<:=")
+            }) {
+                self.next_token()?;
+                self.parse_expr()?;
+                kind = ItemKind::ComprehensionGenerator;
+            }
+            let span = self.span_finish(start);
+            self.insert_item(i, kind, span);
+
+            if !self.expect_optional_symbol(",") {
+                break;
+            }
+        }
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::ComprehensionRight, span);
+        Ok(())
+    }
+
     fn parse_list(&mut self) -> ParseResult {
         // TODO: impropet list
         let (i, start) = self.span_start();
