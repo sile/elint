@@ -19,6 +19,8 @@ fn main() -> noargs::Result<()> {
         return Ok(());
     }
 
+    let only_parse = noargs::flag("only-parse").take(&mut args).is_present();
+
     let mut paths: Vec<std::path::PathBuf> = Vec::new();
     while let Some(path) = noargs::arg("[PATH]..")
         .take(&mut args)
@@ -48,6 +50,9 @@ fn main() -> noargs::Result<()> {
                 eprintln!("  --> {}:{}:{}", path.display(), line, column);
                 eprintln!("{context_lines}");
             })?;
+            if only_parse {
+                continue;
+            }
 
             let ast = elint::Ast {
                 text: text.clone(),
