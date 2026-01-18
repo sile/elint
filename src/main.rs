@@ -77,7 +77,7 @@ fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
     let mut column = 1usize;
 
     // Find line and column from byte offset
-    for (i, ch) in text.chars().enumerate() {
+    for (i, ch) in text.char_indices() {
         if i >= byte_offset {
             break;
         }
