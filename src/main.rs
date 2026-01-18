@@ -57,7 +57,6 @@ fn check(ast: &elint::Ast) -> Result<(), (elint::Error, &'static str)> {
 fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
     let mut line = 1usize;
     let mut column = 1usize;
-    let mut line_start = 0;
 
     // Find line and column from byte offset
     for (i, ch) in text.chars().enumerate() {
@@ -67,7 +66,6 @@ fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
         if ch == '\n' {
             line += 1;
             column = 1;
-            line_start = i + 1;
         } else {
             column += 1;
         }
