@@ -57,6 +57,7 @@ pub enum ItemKind {
     TryOf,
     TryCatchClause,
     TryAfter,
+    Begin,
     Case, // TODO: CaseExpr
     CaseClauses,
     CaseClause,

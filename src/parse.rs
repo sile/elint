@@ -732,6 +732,7 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "try" => self.parse_try()?,
+                    "begin" => self.parse_begin()?,
                     "maybe" => self.parse_maybe_expr()?,
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
                         self.parse_anonymous_fun()?
@@ -757,6 +758,17 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_begin(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("begin")?;
+        self.parse_body()?;
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Begin, span);
         Ok(())
     }
 
