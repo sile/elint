@@ -524,8 +524,7 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
 
         self.parse_pattern()?; // pattern
-        // TODO: guard (optional)
-        self.push_item(ItemKind::Guard, self.next_empty_span());
+        self.parse_guard()?;
         self.expect_symbol("->")?;
         self.parse_body()?; // clause body
 
@@ -569,8 +568,7 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
 
         self.parse_pattern()?; // pattern
-        // TODO: guard (optional)
-        self.push_item(ItemKind::Guard, self.next_empty_span());
+        self.parse_guard()?;
         self.expect_symbol("->")?;
         self.parse_body()?; // clause body
 

@@ -33,6 +33,8 @@ impl Token {
                 | "|"
                 | "orelse"
                 | "andalso"
+                | "or"
+                | "and"
                 | "div"
                 | "rem"
                 | "mod"
