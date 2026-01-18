@@ -410,12 +410,26 @@ impl<'text> Parser<'text> {
         let (i, start) = self.span_start();
         self.expect_symbol("#")?;
         self.expect_symbol("{")?;
+
+        let mut kind = ItemKind::MapCreate;
+        let mut is_first = true;
+
         if !self.is_next_symbol("}") {
             loop {
                 self.parse_expr()?;
-                // TODO: add map_match
+
+                // Regular map creation: key => value or key := value
                 self.expect_symbol_any(&["=>", ":="])?;
                 self.parse_expr()?;
+
+                if is_first && self.is_next_symbol("||") {
+                    // This is a map comprehension
+                    kind = ItemKind::MapComprehension;
+                    self.parse_comprehension_right()?;
+                    break;
+                }
+                is_first = false;
+
                 if !self.expect_optional_symbol(",") {
                     break;
                 }
@@ -424,7 +438,7 @@ impl<'text> Parser<'text> {
         self.expect_symbol("}")?;
 
         let span = self.span_finish(start);
-        self.insert_item(i, ItemKind::MapCreate, span);
+        self.insert_item(i, kind, span);
         Ok(())
     }
 
@@ -469,7 +483,7 @@ impl<'text> Parser<'text> {
             self.parse_expr()?;
             if self.peek_token().is_some_and(|t| {
                 t.kind == TokenKind::Symbol
-                    && matches!(t.text(&self.text), "<-" | "<=" | "<:-" | "<:=")
+                    && matches!(t.text(&self.text), "<-" | "<=" | "<:-" | "<:=" | ":=")
             }) {
                 self.next_token()?;
                 self.parse_expr()?;

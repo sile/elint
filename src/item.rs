@@ -22,6 +22,7 @@ impl Item {
 pub enum ItemKind {
     MapCreate,
     MapUpdate,
+    MapComprehension,
     RecordCreate,
     RecordUpdate,
     RecordFieldAccess,
