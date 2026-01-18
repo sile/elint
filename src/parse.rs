@@ -777,6 +777,11 @@ impl<'text> Parser<'text> {
                     "#" if self.is_nth_token(1, TokenKind::Symbol, "{") => {
                         self.parse_map_create()?
                     }
+                    "#" if self.is_nth_token_kind(1, TokenKind::Atom)
+                        && self.is_nth_token(2, TokenKind::Symbol, ".") =>
+                    {
+                        self.parse_record_field_index()?
+                    }
                     "#" if self.is_nth_token_kind(1, TokenKind::Atom) => {
                         self.parse_record_create()?
                     }
@@ -785,6 +790,18 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_record_field_index(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_symbol("#")?;
+        self.parse_atom()?; // record name
+        self.expect_symbol(".")?;
+        self.parse_atom()?; // field name
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::RecordFieldIndex, span);
         Ok(())
     }
 

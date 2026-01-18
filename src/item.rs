@@ -26,6 +26,7 @@ pub enum ItemKind {
     RecordCreate,
     RecordUpdate,
     RecordFieldAccess,
+    RecordFieldIndex,
     Binary,
     Attr,
     Match,
