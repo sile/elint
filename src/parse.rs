@@ -1,10 +1,12 @@
 use crate::item::{Item, ItemKind, Span};
 use crate::token::{Token, TokenKind};
+use std::backtrace::Backtrace;
 
 #[derive(Debug)]
 pub struct ParseError {
     pub span: Span,
     pub reason: String,
+    pub backtrace: Backtrace,
 }
 
 impl ParseError {
@@ -15,13 +17,18 @@ impl ParseError {
         Self {
             span,
             reason: reason.into(),
+            backtrace: Backtrace::force_capture(), // TODO
         }
     }
 }
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parse Error: {} ({:?})", self.reason, self.span)
+        write!(
+            f,
+            "Parse Error: {} ({:?})\nBacktrace:\n{}",
+            self.reason, self.span, self.backtrace
+        )
     }
 }
 
