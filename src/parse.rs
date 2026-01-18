@@ -207,6 +207,15 @@ impl<'text> Parser<'text> {
         Ok(t.span)
     }
 
+    fn parse_strings(&mut self, i: usize) -> ParseResult {
+        while self.is_nth_token_kind(1, TokenKind::String) {
+            self.next_token()?; // consume the string token
+            self.push_item(ItemKind::String, self.last_span());
+        }
+        self.insert_item2(i, ItemKind::Strings);
+        Ok(())
+    }
+
     pub fn parse_expr(&mut self) -> ParseResult<()> {
         let i = self.items.len();
         self.parse_expr_item()?;
@@ -272,6 +281,10 @@ impl<'text> Parser<'text> {
             self.parse_record_update(i)
         } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
             self.parse_map_update(i)
+        } else if self.items[i].kind == ItemKind::String
+            && self.is_nth_token_kind(1, TokenKind::String)
+        {
+            self.parse_strings(i)
         } else {
             Ok(())
         }

@@ -35,6 +35,7 @@ pub enum ItemKind {
     Float,
     Char,
     String,
+    Strings,
     SigilString,
     Comment,
     BinaryOp,
