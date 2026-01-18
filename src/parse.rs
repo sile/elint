@@ -320,7 +320,7 @@ impl<'text> Parser<'text> {
         if !self.is_next_symbol("}") {
             loop {
                 self.parse_expr()?; // key
-                self.expect_symbol("=>")?;
+                self.expect_symbol_any(&["=>", ":="])?;
                 self.parse_expr()?; // value
                 if !self.expect_optional_symbol(",") {
                     break;

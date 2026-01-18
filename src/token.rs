@@ -39,6 +39,7 @@ impl Token {
                 | "bsr"
                 | "band"
                 | "bor"
+                | "bxor"
                 | "orelse"
                 | "andalso"
                 | "or"
