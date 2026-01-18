@@ -765,7 +765,11 @@ impl<'text> Parser<'text> {
     fn parse_receive(&mut self) -> ParseResult {
         let (i, start) = self.span_start();
         self.expect_keyword("receive")?;
-        self.parse_case_clauses()?;
+        if self.is_next_keyword("after") {
+            self.push_none();
+        } else {
+            self.parse_case_clauses()?;
+        }
 
         // Check for optional 'after' clause
         if self.expect_optional_keyword("after") {
