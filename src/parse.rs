@@ -263,24 +263,34 @@ impl<'text> Parser<'text> {
     // TODO: rename
     fn parse_expr_item(&mut self) -> ParseResult<()> {
         let i = self.items.len();
+        self.parse_compound_expr()?;
+        loop {
+            if self.is_next_symbol("?=") {
+                self.parse_maybe_match(i)?;
+            } else if self.is_next_symbol("=") {
+                self.parse_match(i)?;
+            } else if self.is_next_symbol("#")
+                && self.is_nth_token_kind(1, TokenKind::Atom)
+                && self.is_nth_token(2, TokenKind::Symbol, ".")
+            {
+                self.parse_record_field_access(i)?;
+            } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
+                self.parse_record_update(i)?;
+            } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
+                self.parse_map_update(i)?;
+            } else {
+                return Ok(());
+            }
+        }
+    }
+
+    fn parse_compound_expr(&mut self) -> ParseResult<()> {
+        let i = self.items.len();
         self.parse_base_expr_item()?;
         if self.is_next_symbol(":") {
             self.parse_module_fun_call(i)
         } else if self.is_next_symbol("(") {
             self.parse_fun_call(i)
-        } else if self.is_next_symbol("=") {
-            self.parse_match(i)
-        } else if self.is_next_symbol("?=") {
-            self.parse_maybe_match(i)
-        } else if self.is_next_symbol("#")
-            && self.is_nth_token_kind(1, TokenKind::Atom)
-            && self.is_nth_token(2, TokenKind::Symbol, ".")
-        {
-            self.parse_record_field_access(i)
-        } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
-            self.parse_record_update(i)
-        } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
-            self.parse_map_update(i)
         } else if self.items[i].kind == ItemKind::String
             && self.is_nth_token_kind(0, TokenKind::String)
         {
