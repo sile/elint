@@ -467,14 +467,14 @@ impl<'text> Parser<'text> {
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
                     "maybe" => self.parse_maybe_expr()?,
-                    _ => return Err(ParseError::new(self.last_span(), "TODO")),
+                    _ => return Err(ParseError::new(self.next_span(), "TODO")),
                 }
             }
             TokenKind::Symbol => {
                 self.token_i -= 1;
                 match t.text(self.text) {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
-                    _ => return Err(ParseError::new(self.last_span(), "TODO")),
+                    _ => return Err(ParseError::new(self.next_span(), "TODO")),
                 }
             }
         }
