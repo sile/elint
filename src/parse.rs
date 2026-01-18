@@ -104,13 +104,24 @@ impl<'text> Parser<'text> {
     pub fn parse_module(&mut self) -> ParseResult {
         while !self.is_eof() {
             if self.is_next_symbol("-") {
-                todo!()
+                self.parse_attr()?;
             } else {
                 self.parse_fun_decl()?;
             }
         }
         let span = Span::new(0, self.text.len());
         self.insert_item(0, ItemKind::Module, span);
+        Ok(())
+    }
+
+    pub fn parse_attr(&mut self) -> ParseResult {
+        let (_i, start) = self.span_start();
+        self.expect_symbol("-")?;
+        while !self.expect_optional_symbol(".") {
+            self.next_token()?;
+        }
+        let span = self.span_finish(start);
+        self.push_item(ItemKind::Attr, span);
         Ok(())
     }
 
