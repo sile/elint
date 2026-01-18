@@ -28,6 +28,8 @@ impl Token {
                 | "/"
                 | "=="
                 | "=:="
+                | "<"
+                | ">"
                 | "|"
                 | "orelse"
                 | "andalso"
