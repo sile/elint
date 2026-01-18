@@ -721,6 +721,7 @@ impl<'text> Parser<'text> {
                 self.token_i -= 1;
                 match t.text(self.text) {
                     "case" => self.parse_case()?,
+                    "try" => self.parse_try()?,
                     "maybe" => self.parse_maybe_expr()?,
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
                         self.parse_anonymous_fun()?
@@ -746,6 +747,75 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_try(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("try")?;
+
+        // Parse try body or try-of
+        if self.is_next_keyword("of") {
+            // try ... of ... -> ... (with case clauses)
+            self.parse_body()?;
+            self.expect_keyword("of")?;
+            self.parse_case_clauses()?;
+            let try_item_i = self.items.len();
+            self.insert_item2(i, ItemKind::TryCase);
+        } else {
+            // try ... (without case clauses)
+            self.parse_body()?;
+            let try_item_i = self.items.len();
+            self.insert_item2(i, ItemKind::TryBody);
+        }
+
+        // Parse optional catch clauses
+        if self.is_next_keyword("catch") {
+            self.expect_keyword("catch")?;
+            self.parse_try_catch_clauses()?;
+        }
+
+        // Parse optional after clause
+        if self.is_next_keyword("after") {
+            self.expect_keyword("after")?;
+            let (i, start) = self.span_start();
+            self.parse_body()?;
+            let span = self.span_finish(start);
+            self.insert_item(i, ItemKind::TryAfter, span);
+        }
+
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Try, span);
+        Ok(())
+    }
+
+    fn parse_try_catch_clauses(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+        loop {
+            self.parse_try_catch_clause()?;
+            if !self.is_next_symbol(";") {
+                break;
+            }
+            let _ = self.next_token()?; // consume ';'
+        }
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::Clauses, span);
+        Ok(())
+    }
+
+    fn parse_try_catch_clause(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        // Parse exception pattern (e.g., error:Reason or throw:Value)
+        self.parse_pattern()?;
+        self.parse_guard()?;
+        self.expect_symbol("->")?;
+        self.parse_body()?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::TryCatchClause, span);
         Ok(())
     }
 
