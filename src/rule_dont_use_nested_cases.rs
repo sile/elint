@@ -10,7 +10,7 @@ pub fn check(ast: &Ast) -> CheckResult {
         let Ok(v) = item::CaseView::new(item) else {
             continue;
         };
-        check_case(ast, v)?;
+        check_case(ast, v).map_err(|e|e.fix_span(item.span()))?;
     }
 
     Ok(())
@@ -59,7 +59,8 @@ fn check_nested_case(ast: &Ast, body: item::ItemsView) -> CheckResult {
     }
 
     if has_ok && has_error {
-        todo!()
+        let message = format!("Lint Rule Details\n=======\n\n{RULE_TEXT}");
+        return Err(crate::Error::new(item::Span::ZERO, message));
     }
 
     Ok(())
