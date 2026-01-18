@@ -1,4 +1,5 @@
 pub mod command_parse;
+pub mod fs;
 pub mod item;
 pub mod parse;
 pub mod rule_dont_use_nested_cases;
