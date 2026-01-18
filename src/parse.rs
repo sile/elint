@@ -734,7 +734,27 @@ impl<'text> Parser<'text> {
     }
 
     fn parse_pattern(&mut self) -> ParseResult {
-        self.parse_expr() // TODO
+        // TODO
+        let i = self.items.len();
+        self.parse_base_expr_item()?;
+        loop {
+            if self.is_next_symbol("?=") {
+                self.parse_maybe_match(i)?;
+            } else if self.is_next_symbol("=") {
+                self.parse_match(i)?;
+            } else if self.is_next_symbol("#")
+                && self.is_nth_token_kind(1, TokenKind::Atom)
+                && self.is_nth_token(2, TokenKind::Symbol, ".")
+            {
+                self.parse_record_field_access(i)?;
+            } else if self.is_next_symbol("#") && self.is_nth_token_kind(1, TokenKind::Atom) {
+                self.parse_record_update(i)?;
+            } else if self.is_next_symbol("#") && self.is_nth_token(1, TokenKind::Symbol, "{") {
+                self.parse_map_update(i)?;
+            } else {
+                return Ok(());
+            }
+        }
     }
 
     fn parse_case_clause(&mut self) -> ParseResult<()> {
@@ -997,10 +1017,10 @@ impl<'text> Parser<'text> {
 
         self.parse_base_expr_item()?; // TODO: pattern
         if self.expect_optional_symbol(":") {
-            self.parse_expr()?; // TODO: pattern
+            self.parse_pattern()?;
         }
         if self.expect_optional_symbol(":") {
-            self.parse_base_expr_item()?;
+            self.parse_base_expr_item()?; // TODO: Variable
         }
         self.parse_guard()?;
         self.expect_symbol("->")?;
