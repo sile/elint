@@ -758,9 +758,11 @@ impl<'text> Parser<'text> {
                     "fun" if self.is_nth_token(1, TokenKind::Symbol, "(") => {
                         self.parse_anonymous_fun()?
                     }
-                    "fun" if self.is_nth_token(2, TokenKind::Symbol, "(") => {
-                        // named fun
-                        return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}")));
+                    "fun"
+                        if self.is_nth_token_kind(1, TokenKind::Variable)
+                            && self.is_nth_token(2, TokenKind::Symbol, "(") =>
+                    {
+                        self.parse_named_fun()?
                     }
                     "fun" => self.parse_fun_ref()?,
                     "not" => self.parse_unary_op_expr()?,
@@ -790,6 +792,44 @@ impl<'text> Parser<'text> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_named_fun(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_keyword("fun")?;
+
+        loop {
+            self.parse_named_fun_clause()?;
+            if !self.is_next_symbol(";") {
+                break;
+            }
+            let _ = self.next_token()?; // consume ';'
+        }
+
+        self.expect_keyword("end")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::NamedFun, span);
+        Ok(())
+    }
+
+    fn parse_named_fun_clause(&mut self) -> ParseResult<()> {
+        let (i, start) = self.span_start();
+
+        let t = self.next_token()?;
+        if t.kind != TokenKind::Variable {
+            return Err(ParseError::new(t.span, "expected variable in named fun"));
+        }
+        self.push_item(ItemKind::Variable, t.span);
+
+        self.parse_args()?;
+        self.parse_guard()?;
+        self.expect_symbol("->")?;
+        self.parse_body()?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::NamedFunClause, span);
         Ok(())
     }
 
