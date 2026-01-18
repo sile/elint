@@ -284,6 +284,27 @@ impl<'text> Parser<'text> {
         Ok(last)
     }
 
+    fn parse_map_create(&mut self) -> ParseResult {
+        let (i, start) = self.span_start();
+        self.expect_symbol("#")?;
+        self.expect_symbol("{")?;
+        if !self.is_next_symbol("}") {
+            loop {
+                self.parse_expr()?;
+                self.expect_symbol("=>")?;
+                self.parse_expr()?;
+                if !self.expect_optional_symbol(",") {
+                    break;
+                }
+            }
+        }
+        self.expect_symbol("}")?;
+
+        let span = self.span_finish(start);
+        self.insert_item(i, ItemKind::MapCreate, span);
+        Ok(())
+    }
+
     fn parse_binary(&mut self) -> ParseResult {
         let (_i, start) = self.span_start();
         self.expect_symbol("<<")?;
@@ -523,7 +544,7 @@ impl<'text> Parser<'text> {
                     "{" => self.parse_tuple(|p| p.parse_expr())?,
                     "<<" => self.parse_binary()?,
                     "#" if self.is_nth_token(1, TokenKind::Symbol, "{") => {
-                        self.parse_map_literal()?
+                        self.parse_map_create()?
                     }
                     t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
