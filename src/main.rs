@@ -42,7 +42,7 @@ fn main() -> noargs::Result<()> {
         eprintln!("Lint Error: RULE={lint_name}");
         eprintln!("  --> {}:{}:{}", path.display(), line, column);
         eprintln!("{context_lines}");
-        eprintln!("\n{}", e.message);
+        eprintln!("\n{}\n", e.message);
         std::process::exit(1);
     }
 
