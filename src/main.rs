@@ -39,7 +39,7 @@ fn main() -> noargs::Result<()> {
     };
     if let Err((e, lint_name)) = check(&ast) {
         let (line, column, context_lines) = get_error_context(e.span.start, &text);
-        eprintln!("Lint Error: {lint_name}");
+        eprintln!("Lint Error: RULE={lint_name}");
         eprintln!("  --> {}:{}:{}", path.display(), line, column);
         eprintln!("{context_lines}");
         eprintln!("\n{}", e.message);
@@ -55,7 +55,7 @@ fn check(ast: &elint::Ast) -> Result<(), (elint::Error, &'static str)> {
 }
 
 fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
-    let mut line = 1;
+    let mut line = 1usize;
     let mut column = 1usize;
     let mut line_start = 0;
 
@@ -76,37 +76,24 @@ fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
     // Extract context lines (current line + surrounding lines)
     let mut context_lines = String::new();
 
-    // Find the start of the current line
-    for ch in text[..line_start].chars().rev() {
-        if ch == '\n' {
-            break;
-        }
-    }
-
     // Build context with line numbers
     let lines: Vec<&str> = text.lines().collect();
     let current_line_idx = line - 1;
 
-    // Show previous line (if exists)
-    if current_line_idx > 0 {
-        context_lines.push_str(&format!(
-            " {} | {}\n",
-            current_line_idx,
-            lines[current_line_idx - 1]
-        ));
-    }
+    // Calculate range: show 2 previous lines if exist (ditto for next lines)
+    let start_idx = current_line_idx.saturating_sub(2);
+    let end_idx = (current_line_idx + 3).min(lines.len());
 
-    // Show current line with error indicator
-    context_lines.push_str(&format!(" {} | {}\n", line, lines[current_line_idx]));
-    context_lines.push_str(&format!("   | {}^\n", " ".repeat(column.saturating_sub(1))));
+    for i in start_idx..end_idx {
+        let line_num = i + 1;
+        let is_error_line = i == current_line_idx;
 
-    // Show next line (if exists)
-    if current_line_idx + 1 < lines.len() {
-        context_lines.push_str(&format!(
-            " {} | {}\n",
-            line + 1,
-            lines[current_line_idx + 1]
-        ));
+        context_lines.push_str(&format!(" {} | {}\n", line_num, lines[i]));
+
+        // Show error indicator only on the error line
+        if is_error_line {
+            context_lines.push_str(&format!("   | {}^\n", " ".repeat(column.saturating_sub(1))));
+        }
     }
 
     (line, column, context_lines)
