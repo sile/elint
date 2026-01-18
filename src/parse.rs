@@ -481,9 +481,15 @@ impl<'text> Parser<'text> {
             let mut kind = ItemKind::ComprehensionFilter;
             let (i, start) = self.span_start();
             self.parse_expr()?;
-            if self.peek_token().is_some_and(|t| {
+            if self.is_next_symbol(":=") {
+                self.next_token()?;
+                self.parse_expr()?;
+                self.expect_symbol_any(&["<-", "<:-"])?;
+                self.parse_expr()?;
+                kind = ItemKind::ComprehensionGenerator;
+            } else if self.peek_token().is_some_and(|t| {
                 t.kind == TokenKind::Symbol
-                    && matches!(t.text(&self.text), "<-" | "<=" | "<:-" | "<:=" | ":=")
+                    && matches!(t.text(&self.text), "<-" | "<=" | "<:-" | "<:=")
             }) {
                 self.next_token()?;
                 self.parse_expr()?;
