@@ -1,5 +1,5 @@
+use crate::Ast;
 use crate::item::{self, ItemKind};
-use crate::{Ast, CheckResult};
 
 pub const RULE_NAME: &str = "nested-cases";
 pub const RULE_TEXT: &str = include_str!("../rules/nested-cases.md");
@@ -19,7 +19,7 @@ pub fn check(ast: &Ast) -> Vec<crate::Error> {
     errors
 }
 
-fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
+fn check_case(ast: &Ast, v: item::CaseView) -> Result<(), crate::Error> {
     let mut ok_body = None;
     let mut has_error = false;
     for clause in v.clauses() {
@@ -45,7 +45,7 @@ fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
     Ok(())
 }
 
-fn check_nested_case(ast: &Ast, body: item::ItemsView) -> CheckResult {
+fn check_nested_case(ast: &Ast, body: item::ItemsView) -> Result<(), crate::Error> {
     let v = body.last().expect("bug");
     let Ok(v) = item::CaseView::new(v) else {
         return Ok(());

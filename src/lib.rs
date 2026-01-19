@@ -10,27 +10,6 @@ pub mod token;
 pub use item::Span;
 
 #[derive(Debug)]
-pub enum ParseError {
-    Tokenize(erl_tokenize::Error),
-}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::Tokenize(e) => write!(f, "Tokenization error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for ParseError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ParseError::Tokenize(e) => Some(e),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Error {
     pub span: item::Span,
     pub message: String,
@@ -57,9 +36,6 @@ impl std::fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
-
-pub type CheckResult<T = ()> = Result<T, Error>;
-pub type CheckError = ParseError;
 
 #[derive(Debug)]
 pub struct Ast {
