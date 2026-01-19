@@ -21,6 +21,15 @@ fn main() -> noargs::Result<()> {
 
     let only_parse = noargs::flag("only-parse").take(&mut args).is_present();
 
+    let mut target_lint_names: Vec<String> = Vec::new();
+    while let Some(a) = noargs::opt("lint")
+        .short('l')
+        .take(&mut args)
+        .present_and_then(|a| a.value().parse())?
+    {
+        target_lint_names.push(a);
+    }
+
     let mut paths: Vec<std::path::PathBuf> = Vec::new();
     while let Some(path) = noargs::arg("[PATH]..")
         .take(&mut args)
@@ -66,7 +75,7 @@ fn main() -> noargs::Result<()> {
                 text: text.clone(),
                 items: parser.items,
             };
-            for (lint_name, e) in check(&ast) {
+            for (lint_name, e) in check(&target_lint_names, &ast) {
                 if expect.handle_error(lint_name, e.span) {
                     continue;
                 }
@@ -101,9 +110,13 @@ fn main() -> noargs::Result<()> {
     Ok(())
 }
 
-fn check(ast: &elint::Ast) -> Vec<(&'static str, elint::Error)> {
+fn check(target_lint_names: &[String], ast: &elint::Ast) -> Vec<(&'static str, elint::Error)> {
     let mut errors = Vec::new();
     for (name, check) in elint::RULES {
+        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == name) {
+            continue;
+        }
+
         for e in check(ast) {
             errors.push((*name, e));
         }
