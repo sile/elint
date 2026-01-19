@@ -27,7 +27,12 @@ pub fn check(ast: &Ast) -> Vec<crate::Span> {
         if !children.next().is_some_and(|t| t.atom_eq("element")) {
             continue;
         }
-        if !children.next().is_some_and(|t| t.children().count() == 2) {
+        if !children.next().is_some_and(|t| {
+            t.children().count() == 2
+                && t.children()
+                    .next()
+                    .is_some_and(|t| t.kind() == ItemKind::Integer)
+        }) {
             continue;
         }
 
