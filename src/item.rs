@@ -123,14 +123,14 @@ impl Span {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ItemView<'a> {
-    // todo: add text field
+    text: &'a str,
     items: &'a [Item],
     i: usize,
 }
 
 impl<'a> ItemView<'a> {
-    pub fn new(items: &'a [Item], i: usize) -> Self {
-        Self { items, i }
+    pub fn new(text: &'a str, items: &'a [Item], i: usize) -> Self {
+        Self { text, items, i }
     }
 
     pub fn kind(&self) -> ItemKind {
@@ -161,7 +161,7 @@ impl<'a> ItemView<'a> {
         let span = self.span();
         for (i, item) in self.items[..self.i].iter().rev().enumerate() {
             if item.span.contains(span) {
-                return Some(Self::new(self.items, self.i - i - 1));
+                return Some(Self::new(self.text, self.items, self.i - i - 1));
             }
         }
         None
@@ -170,13 +170,13 @@ impl<'a> ItemView<'a> {
     pub fn children(&self) -> ItemsView<'a> {
         let start = self.i + 1;
         let end = self.end_index();
-        ItemsView::new(self.items, start, end)
+        ItemsView::new(self.text, self.items, start, end)
     }
 
     pub fn siblings(&self) -> ItemsView<'a> {
         let start = self.start_index();
         let end = self.parent().map_or(self.items.len(), |p| p.end_index());
-        ItemsView::new(self.items, start, end)
+        ItemsView::new(self.text, self.items, start, end)
     }
 
     pub fn expect_kind(&self, kind: ItemKind) -> ParseResult {
@@ -194,14 +194,20 @@ impl<'a> ItemView<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ItemsView<'a> {
+    text: &'a str,
     items: &'a [Item],
     start: usize,
     end: usize,
 }
 
 impl<'a> ItemsView<'a> {
-    fn new(items: &'a [Item], start: usize, end: usize) -> Self {
-        Self { items, start, end }
+    fn new(text: &'a str, items: &'a [Item], start: usize, end: usize) -> Self {
+        Self {
+            text,
+            items,
+            start,
+            end,
+        }
     }
 }
 
@@ -212,7 +218,7 @@ impl<'a> Iterator for ItemsView<'a> {
         let i = self.start;
         let next = self.items.get(i).filter(|_| i < self.end)?;
         self.start += next.span.items(&self.items[i..]).len();
-        Some(ItemView::new(self.items, i))
+        Some(ItemView::new(self.text, self.items, i))
     }
 }
 

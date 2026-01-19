@@ -17,7 +17,7 @@ pub fn try_run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
     let mut parser = crate::parse::Parser::new(&text, tokens);
     parser.parse_module()?;
 
-    let view = crate::item::ItemView::new(&parser.items, 0);
+    let view = crate::item::ItemView::new(&parser.text, &parser.items, 0);
     let json_view = to_json(view, &text);
 
     // Pretty print with formatting

@@ -45,7 +45,7 @@ pub struct Ast {
 
 impl Ast {
     pub fn root(&self) -> item::ItemView<'_> {
-        item::ItemView::new(&self.items, 0)
+        item::ItemView::new(&self.text, &self.items, 0)
     }
 
     pub fn text(&self, span: item::Span) -> &str {
@@ -53,7 +53,7 @@ impl Ast {
     }
 
     pub fn item_views(&self) -> impl Iterator<Item = item::ItemView<'_>> {
-        (0..self.items.len()).map(|i| item::ItemView::new(&self.items, i))
+        (0..self.items.len()).map(|i| item::ItemView::new(&self.text, &self.items, i))
     }
 
     pub fn is_atom(&self, t: item::ItemView, name: &str) -> bool {
