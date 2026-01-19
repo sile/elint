@@ -3,6 +3,7 @@ pub mod expect;
 pub mod fs;
 pub mod item;
 pub mod parse;
+pub mod rule_element_bif;
 pub mod rule_nested_cases;
 pub mod token;
 
@@ -91,5 +92,7 @@ impl Ast {
     }
 }
 
-pub const RULES: &[(&str, fn(&Ast) -> Vec<Error>)] =
-    &[(rule_nested_cases::RULE_NAME, rule_nested_cases::check)];
+pub const RULES: &[(&str, fn(&Ast) -> Vec<Error>)] = &[
+    (rule_nested_cases::RULE_NAME, rule_nested_cases::check),
+    (rule_element_bif::RULE_NAME, rule_element_bif::check),
+];
