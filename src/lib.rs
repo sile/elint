@@ -6,6 +6,8 @@ pub mod parse;
 pub mod rule_dont_use_nested_cases;
 pub mod token;
 
+pub use item::Span;
+
 #[derive(Debug)]
 pub enum ParseError {
     Tokenize(erl_tokenize::Error),
