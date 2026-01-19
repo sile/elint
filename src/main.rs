@@ -85,6 +85,9 @@ fn main() -> noargs::Result<()> {
                 eprintln!("  --> {}:{}:{}", path.display(), line, column);
                 eprintln!("{context_lines}");
                 if !known_errors.contains(lint_name) {
+                    eprintln!(
+                        "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {lint_name}`"
+                    );
                     eprintln!("\n{}\n", e.message);
                 }
 
@@ -93,7 +96,9 @@ fn main() -> noargs::Result<()> {
             }
 
             for (lint_name, span) in expect.unmatched_expectations() {
-                if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == lint_name) {
+                if !target_lint_names.is_empty()
+                    && !target_lint_names.iter().any(|n| n == lint_name)
+                {
                     continue;
                 }
 
