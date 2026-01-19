@@ -56,7 +56,7 @@ fn main() -> noargs::Result<()> {
                 continue;
             }
 
-            let expect = elint::expect::ExpectRules::new(&parser).inspect_err(|e| {
+            let mut expect = elint::expect::ExpectRules::new(&parser).inspect_err(|e| {
                 let (line, column, context_lines) = get_error_context(e.span.start, &text);
                 eprintln!("  --> {}:{}:{}", path.display(), line, column);
                 eprintln!("{context_lines}");
@@ -68,6 +68,10 @@ fn main() -> noargs::Result<()> {
             };
             if let Err((errors, lint_name)) = check(&ast) {
                 for e in errors {
+                    if expect.handle_error(lint_name, e.span) {
+                        continue;
+                    }
+
                     let (line, column, context_lines) = get_error_context(e.span.start, &text);
                     eprintln!("Lint Error: RULE={lint_name}");
                     eprintln!("  --> {}:{}:{}", path.display(), line, column);
@@ -79,6 +83,14 @@ fn main() -> noargs::Result<()> {
                     error_count += 1;
                     known_errors.insert(lint_name);
                 }
+            }
+
+            for (lint_name, span) in expect.unmatched_expectations() {
+                let (line, column, context_lines) = get_error_context(span.start, &text);
+                eprintln!("Lint Expectation Not Met: RULE={lint_name}");
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+                error_count += 1;
             }
         }
     }

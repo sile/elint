@@ -30,7 +30,7 @@ impl ExpectRules {
 
             for name in text.split(',') {
                 let name = name.trim();
-                let Some(rule_name) = crate::RULE_NAMES.iter().find(|v| **v==name) else {
+                let Some(rule_name) = crate::RULE_NAMES.iter().find(|v| **v == name) else {
                     return Err(crate::Error::new(
                         comment.span,
                         format!("unknown rule: {name}"),
@@ -41,11 +41,30 @@ impl ExpectRules {
                     name: rule_name,
                     comment_span: comment.span,
                     target_span,
+                    matched: false,
                 });
             }
         }
 
         Ok(Self { rules })
+    }
+
+    pub fn handle_error(&mut self, lint_name: &'static str, span: crate::Span) -> bool {
+        let mut expected = false;
+        for rule in &mut  self.rules {
+            if rule.name == lint_name && rule.target_span.contains(span) {
+                rule.matched = true;
+                expected = true;
+            }
+        }
+        expected
+    }
+
+    pub fn unmatched_expectations(&self) -> impl Iterator<Item = (&'static str, crate::Span)> {
+        self.rules
+            .iter()
+            .filter(|r| !r.matched)
+            .map(|r| (r.name, r.comment_span))
     }
 }
 
@@ -54,4 +73,5 @@ pub struct ExpectRule {
     pub name: &'static str,
     pub comment_span: crate::Span,
     pub target_span: crate::Span,
+    pub matched: bool,
 }
