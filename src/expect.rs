@@ -51,7 +51,7 @@ impl ExpectRules {
 
     pub fn handle_error(&mut self, lint_name: &'static str, span: crate::Span) -> bool {
         let mut expected = false;
-        for rule in &mut  self.rules {
+        for rule in &mut self.rules {
             if rule.name == lint_name && rule.target_span.contains(span) {
                 rule.matched = true;
                 expected = true;

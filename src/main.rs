@@ -104,7 +104,7 @@ fn main() -> noargs::Result<()> {
 }
 
 fn check(ast: &elint::Ast) -> Result<(), (Vec<elint::Error>, &'static str)> {
-    elint::rule_dont_use_nested_cases::check(&ast)?;
+    elint::rule_nested_cases::check(&ast)?;
     Ok(())
 }
 

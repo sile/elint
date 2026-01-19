@@ -3,7 +3,7 @@ pub mod expect;
 pub mod fs;
 pub mod item;
 pub mod parse;
-pub mod rule_dont_use_nested_cases;
+pub mod rule_nested_cases;
 pub mod token;
 
 pub use item::Span;
@@ -91,4 +91,4 @@ impl Ast {
     }
 }
 
-pub const RULE_NAMES: &[&str] = &[rule_dont_use_nested_cases::RULE_NAME];
+pub const RULE_NAMES: &[&str] = &[rule_nested_cases::RULE_NAME];
