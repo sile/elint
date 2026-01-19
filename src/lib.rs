@@ -91,4 +91,5 @@ impl Ast {
     }
 }
 
-pub const RULE_NAMES: &[&str] = &[rule_nested_cases::RULE_NAME];
+pub const RULES: &[(&str, fn(&Ast) -> Result<(), Vec<Error>>)] =
+    &[(rule_nested_cases::RULE_NAME, rule_nested_cases::check)];

@@ -30,7 +30,7 @@ impl ExpectRules {
 
             for name in text.split(',') {
                 let name = name.trim();
-                let Some(rule_name) = crate::RULE_NAMES.iter().find(|v| **v == name) else {
+                let Some((rule_name, _)) = crate::RULES.iter().find(|v| v.0 == name) else {
                     return Err(crate::Error::new(
                         comment.span,
                         format!("unknown rule: {name}"),

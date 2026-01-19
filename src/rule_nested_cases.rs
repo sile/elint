@@ -4,7 +4,7 @@ use crate::{Ast, CheckResult};
 pub const RULE_NAME: &str = "nested-cases";
 pub const RULE_TEXT: &str = include_str!("../rules/nested-cases.md");
 
-pub fn check(ast: &Ast) -> Result<(), (Vec<crate::Error>, &'static str)> {
+pub fn check(ast: &Ast) -> Result<(), Vec<crate::Error>> {
     assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
 
     let mut errors = Vec::new();
@@ -19,7 +19,7 @@ pub fn check(ast: &Ast) -> Result<(), (Vec<crate::Error>, &'static str)> {
     if errors.is_empty() {
         Ok(())
     } else {
-        Err((errors, RULE_NAME))
+        Err(errors)
     }
 }
 

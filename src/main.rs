@@ -104,7 +104,9 @@ fn main() -> noargs::Result<()> {
 }
 
 fn check(ast: &elint::Ast) -> Result<(), (Vec<elint::Error>, &'static str)> {
-    elint::rule_nested_cases::check(&ast)?;
+    for (name, check) in elint::RULES {
+        check(ast).map_err(|e| (e, *name))?;
+    }
     Ok(())
 }
 
