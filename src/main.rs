@@ -93,6 +93,10 @@ fn main() -> noargs::Result<()> {
             }
 
             for (lint_name, span) in expect.unmatched_expectations() {
+                if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == lint_name) {
+                    continue;
+                }
+
                 let (line, column, context_lines) = get_error_context(span.start, &text);
                 eprintln!("Lint Expectation Not Met: RULE={lint_name}");
                 eprintln!("  --> {}:{}:{}", path.display(), line, column);
