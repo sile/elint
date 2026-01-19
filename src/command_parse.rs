@@ -39,7 +39,7 @@ pub fn to_json<'a>(
 ) -> nojson::Json<ItemViewJson<'a>> {
     let item_json = ItemViewJson {
         kind: format!("{:?}", view.kind()),
-        text: view.text(text),
+        text: view.text(),
         children: view
             .children()
             .map(|child| to_json(child, text).0)

@@ -141,8 +141,8 @@ impl<'a> ItemView<'a> {
         self.items[self.i].span
     }
 
-    pub fn text<'b>(&self, text: &'b str) -> &'b str {
-        self.span().text(text)
+    pub fn text(&self) -> &'a str {
+        self.span().text(self.text)
     }
 
     pub fn items(&self) -> &'a [Item] {
@@ -187,8 +187,8 @@ impl<'a> ItemView<'a> {
         }
     }
 
-    pub fn atom_eq(&self, text: &str, v: &str) -> bool {
-        self.kind() == ItemKind::Atom && self.text(text) == v
+    pub fn atom_eq(&self, v: &str) -> bool {
+        self.kind() == ItemKind::Atom && self.text() == v
     }
 }
 
