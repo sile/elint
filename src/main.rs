@@ -90,6 +90,7 @@ fn main() -> noargs::Result<()> {
                         rule.name
                     );
                     eprintln!("\nLint Rule Details\n=======\n\n{}\n", rule.text.trim());
+                    eprintln!("------\n");
                 }
 
                 error_count += 1;
