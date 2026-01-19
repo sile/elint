@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub struct ExpectRules {
-    pub rules: std::collections::BTreeMap<&'static str, ExpectRule>,
+    pub rules: Vec<ExpectRule>,
 }
 
 impl ExpectRules {
@@ -34,5 +34,7 @@ impl ExpectRules {
 
 #[derive(Debug)]
 pub struct ExpectRule {
-    pub spans: Vec<crate::Span>,
+    pub name: &'static str,
+    pub comment_span: crate::Span,
+    pub target_span: crate::Span,
 }
