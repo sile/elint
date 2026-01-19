@@ -4,7 +4,7 @@ use crate::{Ast, CheckResult};
 pub const RULE_NAME: &str = "nested-cases";
 pub const RULE_TEXT: &str = include_str!("../rules/nested-cases.md");
 
-pub fn check(ast: &Ast) -> Result<(), Vec<crate::Error>> {
+pub fn check(ast: &Ast) -> Vec<crate::Error> {
     assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
 
     let mut errors = Vec::new();
@@ -16,11 +16,7 @@ pub fn check(ast: &Ast) -> Result<(), Vec<crate::Error>> {
             errors.push(e);
         }
     }
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    errors
 }
 
 fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {

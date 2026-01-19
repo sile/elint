@@ -66,23 +66,21 @@ fn main() -> noargs::Result<()> {
                 text: text.clone(),
                 items: parser.items,
             };
-            if let Err((errors, lint_name)) = check(&ast) {
-                for e in errors {
-                    if expect.handle_error(lint_name, e.span) {
-                        continue;
-                    }
-
-                    let (line, column, context_lines) = get_error_context(e.span.start, &text);
-                    eprintln!("Lint Error: RULE={lint_name}");
-                    eprintln!("  --> {}:{}:{}", path.display(), line, column);
-                    eprintln!("{context_lines}");
-                    if !known_errors.contains(lint_name) {
-                        eprintln!("\n{}\n", e.message);
-                    }
-
-                    error_count += 1;
-                    known_errors.insert(lint_name);
+            for (lint_name, e) in check(&ast) {
+                if expect.handle_error(lint_name, e.span) {
+                    continue;
                 }
+
+                let (line, column, context_lines) = get_error_context(e.span.start, &text);
+                eprintln!("Lint Error: RULE={lint_name}");
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+                if !known_errors.contains(lint_name) {
+                    eprintln!("\n{}\n", e.message);
+                }
+
+                error_count += 1;
+                known_errors.insert(lint_name);
             }
 
             for (lint_name, span) in expect.unmatched_expectations() {
@@ -103,11 +101,14 @@ fn main() -> noargs::Result<()> {
     Ok(())
 }
 
-fn check(ast: &elint::Ast) -> Result<(), (Vec<elint::Error>, &'static str)> {
+fn check(ast: &elint::Ast) -> Vec<(&'static str, elint::Error)> {
+    let mut errors = Vec::new();
     for (name, check) in elint::RULES {
-        check(ast).map_err(|e| (e, *name))?;
+        for e in check(ast) {
+            errors.push((*name, e));
+        }
     }
-    Ok(())
+    errors
 }
 
 fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {

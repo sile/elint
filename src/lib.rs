@@ -91,5 +91,5 @@ impl Ast {
     }
 }
 
-pub const RULES: &[(&str, fn(&Ast) -> Result<(), Vec<Error>>)] =
+pub const RULES: &[(&str, fn(&Ast) -> Vec<Error>)] =
     &[(rule_nested_cases::RULE_NAME, rule_nested_cases::check)];
