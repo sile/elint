@@ -56,6 +56,12 @@ fn main() -> noargs::Result<()> {
                 continue;
             }
 
+            let expect = elint::expect::ExpectRules::new(&parser).inspect_err(|e| {
+                let (line, column, context_lines) = get_error_context(e.span.start, &text);
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+            })?;
+
             let ast = elint::Ast {
                 text: text.clone(),
                 items: parser.items,
