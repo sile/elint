@@ -123,6 +123,7 @@ impl Span {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ItemView<'a> {
+    // todo: add text field
     items: &'a [Item],
     i: usize,
 }
@@ -184,6 +185,10 @@ impl<'a> ItemView<'a> {
         } else {
             Err(ParseError::new(self.span(), format!("TODO")))
         }
+    }
+
+    pub fn atom_eq(&self, text: &str, v: &str) -> bool {
+        self.kind() == ItemKind::Atom && self.text(text) == v
     }
 }
 
