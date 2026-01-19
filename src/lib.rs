@@ -1,4 +1,5 @@
 pub mod command_parse;
+pub mod expect;
 pub mod fs;
 pub mod item;
 pub mod parse;
@@ -87,3 +88,5 @@ impl Ast {
                 .is_some_and(|t| self.text(t.span()) == tag)
     }
 }
+
+pub const RULE_NAMES: &[&str] = &[rule_dont_use_nested_cases::RULE_NAME];
