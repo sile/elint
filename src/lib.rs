@@ -68,7 +68,17 @@ impl Ast {
     }
 }
 
-pub const RULES: &[(&str, fn(&Ast) -> Vec<Error>)] = &[
-    (rule_nested_cases::RULE_NAME, rule_nested_cases::check),
-    (rule_element_bif::RULE_NAME, rule_element_bif::check),
-];
+#[derive(Debug)]
+pub struct Rule {
+    pub name: &'static str,
+    pub text: &'static str,
+    pub check: fn(&Ast) -> Vec<Span>,
+}
+
+impl Rule {
+    pub const fn new(name: &'static str, text: &'static str, check: fn(&Ast) -> Vec<Span>) -> Self {
+        Self { name, text, check }
+    }
+}
+
+pub const RULES: &[Rule] = &[rule_nested_cases::RULE, rule_element_bif::RULE];

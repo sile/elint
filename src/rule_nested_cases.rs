@@ -1,10 +1,13 @@
 use crate::Ast;
 use crate::item::{self, ItemKind};
 
-pub const RULE_NAME: &str = "nested-cases";
-pub const RULE_TEXT: &str = include_str!("../rules/nested-cases.md");
+pub const RULE: crate::Rule = crate::Rule::new(
+    "nested-cases",
+    include_str!("../rules/nested-cases.md"),
+    check,
+);
 
-pub fn check(ast: &Ast) -> Vec<crate::Error> {
+pub fn check(ast: &Ast) -> Vec<crate::Span> {
     assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
 
     let mut errors = Vec::new();
@@ -12,43 +15,43 @@ pub fn check(ast: &Ast) -> Vec<crate::Error> {
         let Ok(v) = item::CaseView::new(item) else {
             continue;
         };
-        if let Err(e) = check_case(ast, v).map_err(|e| e.fix_span(item.span())) {
-            errors.push(e);
+        if !check_case(ast, v) {
+            errors.push(item.span());
         }
     }
     errors
 }
 
-fn check_case(ast: &Ast, v: item::CaseView) -> Result<(), crate::Error> {
+fn check_case(ast: &Ast, v: item::CaseView) -> bool {
     let mut ok_body = None;
     let mut has_error = false;
     for clause in v.clauses() {
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
             if ok_body.is_some() {
-                return Ok(());
+                return true;
             }
             ok_body = Some(clause.body());
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
         } else {
-            return Ok(());
+            return true;
         }
     }
 
     if let Some(body) = ok_body
         && has_error
     {
-        check_nested_case(ast, body)?;
+        check_nested_case(ast, body)
+    } else {
+        true
     }
-
-    Ok(())
 }
 
-fn check_nested_case(ast: &Ast, body: item::ItemsView) -> Result<(), crate::Error> {
+fn check_nested_case(ast: &Ast, body: item::ItemsView) -> bool {
     let v = body.last().expect("bug");
     let Ok(v) = item::CaseView::new(v) else {
-        return Ok(());
+        return true;
     };
 
     let mut has_ok = false;
@@ -57,20 +60,19 @@ fn check_nested_case(ast: &Ast, body: item::ItemsView) -> Result<(), crate::Erro
         let p = clause.pattern();
         if ast.is_atom(p, "ok") || ast.is_tagged_tuple(p, "ok") {
             if has_ok {
-                return Ok(());
+                return true;
             }
             has_ok = true;
         } else if ast.is_atom(p, "error") || ast.is_tagged_tuple(p, "error") {
             has_error = true;
         } else {
-            return Ok(());
+            return true;
         }
     }
 
     if has_ok && has_error {
-        let message = format!("Lint Rule Details\n=======\n\n{RULE_TEXT}");
-        return Err(crate::Error::new(item::Span::ZERO, message));
+        return false;
     }
 
-    Ok(())
+    true
 }

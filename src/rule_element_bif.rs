@@ -1,10 +1,13 @@
 use crate::Ast;
 use crate::item::ItemKind;
 
-pub const RULE_NAME: &str = "element-bif";
-pub const RULE_TEXT: &str = include_str!("../rules/element-bif.md");
+pub const RULE: crate::Rule = crate::Rule::new(
+    "element-bif",
+    include_str!("../rules/element-bif.md"),
+    check,
+);
 
-pub fn check(ast: &Ast) -> Vec<crate::Error> {
+pub fn check(ast: &Ast) -> Vec<crate::Span> {
     assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
 
     let mut errors = Vec::new();
@@ -34,9 +37,7 @@ pub fn check(ast: &Ast) -> Vec<crate::Error> {
             continue;
         }
 
-        let message = format!("Lint Rule Details\n=======\n\n{RULE_TEXT}");
-        let e = crate::Error::new(item.span(), message);
-        errors.push(e);
+        errors.push(item.span());
     }
     errors
 }

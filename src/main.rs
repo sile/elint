@@ -75,24 +75,25 @@ fn main() -> noargs::Result<()> {
                 text: text.clone(),
                 items: parser.items,
             };
-            for (lint_name, e) in check(&target_lint_names, &ast) {
-                if expect.handle_error(lint_name, e.span) {
+            for (rule, span) in check(&target_lint_names, &ast) {
+                if expect.handle_error(rule.name, span) {
                     continue;
                 }
 
-                let (line, column, context_lines) = get_error_context(e.span.start, &text);
-                eprintln!("Lint Error: RULE={lint_name}");
+                let (line, column, context_lines) = get_error_context(span.start, &text);
+                eprintln!("Lint Error: RULE={}", rule.name);
                 eprintln!("  --> {}:{}:{}", path.display(), line, column);
                 eprintln!("{context_lines}");
-                if !known_errors.contains(lint_name) {
+                if !known_errors.contains(rule.name) {
                     eprintln!(
-                        "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {lint_name}`"
+                        "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {}`",
+                        rule.name
                     );
-                    eprintln!("\n{}\n", e.message);
+                    eprintln!("\nLint Rule Details\n=======\n\n{}\n", rule.text.trim());
                 }
 
                 error_count += 1;
-                known_errors.insert(lint_name);
+                known_errors.insert(rule.name);
             }
 
             for (lint_name, span) in expect.unmatched_expectations() {
@@ -119,15 +120,18 @@ fn main() -> noargs::Result<()> {
     Ok(())
 }
 
-fn check(target_lint_names: &[String], ast: &elint::Ast) -> Vec<(&'static str, elint::Error)> {
+fn check(
+    target_lint_names: &[String],
+    ast: &elint::Ast,
+) -> Vec<(&'static elint::Rule, elint::Span)> {
     let mut errors = Vec::new();
-    for (name, check) in elint::RULES {
-        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == name) {
+    for rule in elint::RULES {
+        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == rule.name) {
             continue;
         }
 
-        for e in check(ast) {
-            errors.push((*name, e));
+        for e in (rule.check)(ast) {
+            errors.push((rule, e));
         }
     }
     errors
