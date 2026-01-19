@@ -39,9 +39,11 @@ fn main() -> noargs::Result<()> {
         paths.push("tests/".into());
     }
 
+    let mut error_count = 0;
+    let mut known_errors = std::collections::HashSet::new();
     for path in paths {
         for path in elint::fs::collect_erlang_files(path)? {
-            eprintln!("# {}", path.display());
+            // eprintln!("# {}", path.display());
             let text = std::fs::read_to_string(&path)?;
             let tokens = elint::token::tokenize(&text)?;
             let mut parser = elint::parse::Parser::new(&text, tokens);
@@ -58,21 +60,32 @@ fn main() -> noargs::Result<()> {
                 text: text.clone(),
                 items: parser.items,
             };
-            if let Err((e, lint_name)) = check(&ast) {
-                let (line, column, context_lines) = get_error_context(e.span.start, &text);
-                eprintln!("Lint Error: RULE={lint_name}");
-                eprintln!("  --> {}:{}:{}", path.display(), line, column);
-                eprintln!("{context_lines}");
-                eprintln!("\n{}\n", e.message);
-                std::process::exit(1);
+            if let Err((errors, lint_name)) = check(&ast) {
+                for e in errors {
+                    let (line, column, context_lines) = get_error_context(e.span.start, &text);
+                    eprintln!("Lint Error: RULE={lint_name}");
+                    eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                    eprintln!("{context_lines}");
+                    if !known_errors.contains(lint_name) {
+                        eprintln!("\n{}\n", e.message);
+                    }
+
+                    error_count += 1;
+                    known_errors.insert(lint_name);
+                }
             }
         }
+    }
+
+    if error_count > 0 {
+        eprintln!("Found {error_count} lint error(s)");
+        std::process::exit(1);
     }
 
     Ok(())
 }
 
-fn check(ast: &elint::Ast) -> Result<(), (elint::Error, &'static str)> {
+fn check(ast: &elint::Ast) -> Result<(), (Vec<elint::Error>, &'static str)> {
     elint::rule_dont_use_nested_cases::check(&ast)?;
     Ok(())
 }

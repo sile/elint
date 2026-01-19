@@ -4,17 +4,23 @@ use crate::{Ast, CheckResult};
 pub const RULE_NAME: &str = "dont-use-nested-cases";
 pub const RULE_TEXT: &str = include_str!("../rules/rule-dont-use-nested-cases.md");
 
-pub fn check(ast: &Ast) -> Result<(), (crate::Error, &'static str)> {
+pub fn check(ast: &Ast) -> Result<(), (Vec<crate::Error>, &'static str)> {
     assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
 
+    let mut errors = Vec::new();
     for item in ast.item_views() {
         let Ok(v) = item::CaseView::new(item) else {
             continue;
         };
-        check_case(ast, v).map_err(|e| (e.fix_span(item.span()), RULE_NAME))?;
+        if let Err(e) = check_case(ast, v).map_err(|e| e.fix_span(item.span())) {
+            errors.push(e);
+        }
     }
-
-    Ok(())
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err((errors, RULE_NAME))
+    }
 }
 
 fn check_case(ast: &Ast, v: item::CaseView) -> CheckResult {
