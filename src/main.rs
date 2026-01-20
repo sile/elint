@@ -24,6 +24,7 @@ fn main() -> noargs::Result<()> {
     let mut target_lint_names: Vec<String> = Vec::new();
     while let Some(a) = noargs::opt("lint")
         .short('l')
+        .ty("LINT_RULE_NAME")
         .take(&mut args)
         .present_and_then(|a| a.value().parse())?
     {
