@@ -209,6 +209,21 @@ impl<'a> ItemsView<'a> {
             end,
         }
     }
+
+    pub fn next_is(&mut self, kind: ItemKind) -> bool {
+        self.next().is_some_and(|t| t.kind() == kind)
+    }
+
+    pub fn next_eq(&mut self, kind: ItemKind, text: &str) -> bool {
+        self.next()
+            .is_some_and(|t| t.kind() == kind && t.text() == text)
+    }
+
+    pub fn next_as_args(&mut self, arity: usize) -> Option<Self> {
+        self.next()
+            .filter(|t| t.children().count() == arity)
+            .map(|t| t.children())
+    }
 }
 
 impl<'a> Iterator for ItemsView<'a> {
