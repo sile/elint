@@ -15,7 +15,7 @@ pub fn check(ast: &Ast) -> Vec<crate::Span> {
         let mut children = match item.kind() {
             ItemKind::ModuleFunCall => {
                 let mut children = item.children();
-                if children.next_eq(ItemKind::Atom, "erlang") {
+                if !children.next_eq(ItemKind::Atom, "erlang") {
                     continue;
                 }
                 children
@@ -24,7 +24,7 @@ pub fn check(ast: &Ast) -> Vec<crate::Span> {
             _ => continue,
         };
 
-        if children.next_eq(ItemKind::Atom, "element") {
+        if !children.next_eq(ItemKind::Atom, "element") {
             continue;
         }
         if !children
