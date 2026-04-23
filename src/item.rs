@@ -1,4 +1,4 @@
-use crate::parse::{ParseError, ParseResult};
+use crate::parse::ParseResult;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Item {
@@ -183,7 +183,7 @@ impl<'a> ItemView<'a> {
         if self.kind() == kind {
             Ok(())
         } else {
-            Err(ParseError::new(self.span(), format!("TODO")))
+            Err(crate::Error::new(self.span(), format!("TODO")))
         }
     }
 

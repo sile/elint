@@ -7,35 +7,12 @@ pub mod rule_element_bif;
 pub mod rule_nested_cases;
 pub mod token;
 
+mod error;
+
+pub use error::Error;
 pub use item::Span;
 
-#[derive(Debug)]
-pub struct Error {
-    pub span: item::Span,
-    pub message: String,
-}
-
-impl Error {
-    pub fn new(span: item::Span, message: impl Into<String>) -> Self {
-        Self {
-            span,
-            message: message.into(),
-        }
-    }
-
-    pub fn fix_span(mut self, span: item::Span) -> Self {
-        self.span = span;
-        self
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({:?})", self.message, self.span)
-    }
-}
-
-impl std::error::Error for Error {}
+pub type Result<T = ()> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Ast {

@@ -1,40 +1,8 @@
+use crate::Error;
 use crate::item::{Item, ItemKind, Span};
 use crate::token::{Token, TokenKind};
-use std::backtrace::Backtrace;
 
-#[derive(Debug)]
-pub struct ParseError {
-    pub span: Span,
-    pub reason: String,
-    pub backtrace: Backtrace,
-}
-
-impl ParseError {
-    pub fn new<T>(span: Span, reason: T) -> Self
-    where
-        T: Into<String>,
-    {
-        Self {
-            span,
-            reason: reason.into(),
-            backtrace: Backtrace::force_capture(), // TODO
-        }
-    }
-}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Parse Error: {} ({:?})\nBacktrace:\n{}",
-            self.reason, self.span, self.backtrace
-        )
-    }
-}
-
-impl std::error::Error for ParseError {}
-
-pub type ParseResult<T = ()> = Result<T, ParseError>;
+pub type ParseResult<T = ()> = crate::Result<T>;
 
 #[derive(Debug)]
 pub struct Parser<'text> {
@@ -100,7 +68,7 @@ impl<'text> Parser<'text> {
         } else {
             let n = self.text.len();
             let span = Span { start: n, end: n };
-            Err(ParseError::new(span, "unexpected EOF"))
+            Err(Error::new(span, "unexpected EOF"))
         }
     }
 
@@ -215,7 +183,7 @@ impl<'text> Parser<'text> {
     pub fn parse_atom(&mut self) -> ParseResult<Span> {
         let t = self.next_token()?;
         if t.kind != TokenKind::Atom {
-            return Err(ParseError::new(t.span, "not an atom token"));
+            return Err(Error::new(t.span, "not an atom token"));
         }
         self.push_item(ItemKind::Atom, t.span);
         Ok(t.span)
@@ -268,7 +236,7 @@ impl<'text> Parser<'text> {
     fn parse_binary_op_item(&mut self) -> ParseResult<()> {
         let t = self.next_token()?;
         if !t.is_binary_op(self.text) {
-            return Err(ParseError::new(t.span, "expected binary operator"));
+            return Err(Error::new(t.span, "expected binary operator"));
         }
         self.push_item(ItemKind::BinaryOp, t.span);
         Ok(())
@@ -409,7 +377,7 @@ impl<'text> Parser<'text> {
         if t.kind == TokenKind::Symbol && names.contains(&t.text(self.text)) {
             Ok(t.span)
         } else {
-            Err(ParseError::new(
+            Err(Error::new(
                 t.span,
                 format!(
                     "expected one of symbols {}, got '{}'",
@@ -623,7 +591,7 @@ impl<'text> Parser<'text> {
         if t.kind == TokenKind::Symbol && t.text(self.text) == name {
             Ok(t.span)
         } else {
-            Err(ParseError::new(
+            Err(Error::new(
                 t.span,
                 format!("expected symbol '{}', got '{}'", name, t.text(self.text)),
             ))
@@ -635,7 +603,7 @@ impl<'text> Parser<'text> {
         if t.kind == TokenKind::Keyword && t.text(self.text) == name {
             Ok(t.span)
         } else {
-            Err(ParseError::new(
+            Err(Error::new(
                 t.span,
                 format!("expected keyword '{}', got '{}'", name, t.text(self.text)),
             ))
@@ -800,7 +768,7 @@ impl<'text> Parser<'text> {
                     }
                     "fun" => self.parse_fun_ref()?,
                     "not" => self.parse_unary_op_expr()?,
-                    t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
+                    t => return Err(Error::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
             TokenKind::Symbol => {
@@ -822,7 +790,7 @@ impl<'text> Parser<'text> {
                         self.parse_record_create()?
                     }
                     "-" => self.parse_unary_op_expr()?,
-                    t => return Err(ParseError::new(self.next_span(), format!("TODO: {t:?}"))),
+                    t => return Err(Error::new(self.next_span(), format!("TODO: {t:?}"))),
                 }
             }
         }
@@ -853,7 +821,7 @@ impl<'text> Parser<'text> {
 
         let t = self.next_token()?;
         if t.kind != TokenKind::Variable {
-            return Err(ParseError::new(t.span, "expected variable in named fun"));
+            return Err(Error::new(t.span, "expected variable in named fun"));
         }
         self.push_item(ItemKind::Variable, t.span);
 
@@ -893,7 +861,7 @@ impl<'text> Parser<'text> {
             self.expect_symbol("/")?;
             let t = self.next_token()?;
             if t.kind != TokenKind::Integer {
-                return Err(ParseError::new(t.span, "expected integer arity"));
+                return Err(Error::new(t.span, "expected integer arity"));
             }
             self.push_item(ItemKind::Integer, t.span);
 
@@ -903,7 +871,7 @@ impl<'text> Parser<'text> {
             self.expect_symbol("/")?;
             let t = self.next_token()?;
             if t.kind != TokenKind::Integer {
-                return Err(ParseError::new(t.span, "expected integer arity"));
+                return Err(Error::new(t.span, "expected integer arity"));
             }
             self.push_item(ItemKind::Integer, t.span);
 
