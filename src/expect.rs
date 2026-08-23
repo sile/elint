@@ -40,7 +40,7 @@ impl ExpectRules {
 
             for name in text.split(',') {
                 let name = name.trim();
-                let Some(rule) = crate::RULES.iter().find(|v| v.name == name) else {
+                let Some(rule) = crate::rules::RULES.iter().find(|v| v.name == name) else {
                     return Err(crate::Error::new(
                         comment_span,
                         format!("unknown rule: {name}"),
@@ -123,7 +123,7 @@ mod tests {
 -module(t).
 foo() ->
     g(
-        %% ELINT_EXPECT: element-bif
+        %% ELINT_EXPECT: element_bif
         element(1, T)
     ).
 ";
@@ -138,14 +138,14 @@ foo() ->
         let src = "\
 -module(t).
 foo(T) ->
-    %% ELINT_EXPECT: element-bif
+    %% ELINT_EXPECT: element_bif
     element(1, T).
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");
         let mut expect = ExpectRules::new(&ctx).expect("expect");
-        let findings = (crate::RULES[0].check)(&ctx);
+        let findings = (crate::rules::RULES[0].check)(&ctx);
         assert_eq!(findings.len(), 1);
-        assert!(expect.handle_error("element-bif", findings[0]));
+        assert!(expect.handle_error("element_bif", findings[0]));
         assert!(expect.unmatched_expectations().next().is_none());
     }
 }

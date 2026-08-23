@@ -155,9 +155,9 @@ fn lint_file(
 fn check(
     target_lint_names: &[String],
     ctx: &elint::Context,
-) -> Vec<(&'static elint::Rule, elint::Span)> {
+) -> Vec<(&'static elint::rules::Rule, elint::Span)> {
     let mut errors = Vec::new();
-    for rule in elint::RULES {
+    for rule in elint::rules::RULES {
         if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == rule.name) {
             continue;
         }

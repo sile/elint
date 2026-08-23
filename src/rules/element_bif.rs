@@ -1,12 +1,13 @@
-//! `element-bif` lint: flag `element/2` and `erlang:element/2` with a literal index.
+//! `element_bif` lint: flag `element/2` and `erlang:element/2` with a literal index.
 
+use super::Rule;
 use crate::Context;
 use crate::Span;
 
 /// Lint rule that flags `element/2` used as a BIF.
-pub const RULE: crate::Rule = crate::Rule::new(
-    "element-bif",
-    include_str!("../rules/element-bif.md"),
+pub const RULE: Rule = Rule::new(
+    "element_bif",
+    include_str!("../../rules/element_bif/rule.md"),
     check,
 );
 
@@ -126,6 +127,18 @@ mod tests {
     #[test]
     fn ignores_non_integer_index() {
         let src = "-module(t).\nfoo(N, T) -> element(N, T).\n";
+        assert!(findings(src).is_empty());
+    }
+
+    #[test]
+    fn ng_fixture_has_two_findings() {
+        let src = include_str!("../../rules/element_bif/ng.erl");
+        assert_eq!(findings(src).len(), 2);
+    }
+
+    #[test]
+    fn ok_fixture_has_no_findings() {
+        let src = include_str!("../../rules/element_bif/ok.erl");
         assert!(findings(src).is_empty());
     }
 }
