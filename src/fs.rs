@@ -1,3 +1,9 @@
+//! Collects Erlang source paths under a file or directory.
+
+/// Walks `path` and returns every `.erl` / `.hrl` file.
+///
+/// A file path is returned as a single-element vec when its extension matches.
+/// A directory is scanned recursively.
 pub fn collect_erlang_files<P: AsRef<std::path::Path>>(
     path: P,
 ) -> std::io::Result<Vec<std::path::PathBuf>> {

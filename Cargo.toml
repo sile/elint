@@ -2,6 +2,7 @@
 name = "elint"
 version = "0.0.1"
 edition = "2024"
+rust-version = "1.96"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 license = "MIT"
 description = "Erlang code linter"
@@ -10,6 +11,7 @@ repository = "https://github.com/sile/elint"
 readme = "README.md"
 
 [dependencies]
-erl_tokenize = "0.10.0"
+erl_tokenize = "0.11"
+erl_pp = "0.4"
+erl_parse = "0.2"
 noargs = "0.4.2"
-nojson = "0.3.10"

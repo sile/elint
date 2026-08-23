@@ -6,25 +6,38 @@ version = 4
 name = "elint"
 version = "0.0.1"
 dependencies = [
+ "erl_parse",
+ "erl_pp",
  "erl_tokenize",
  "noargs",
- "nojson",
+]
+
+[[package]]
+name = "erl_parse"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e88bcdeb3cf44a669294ed19a9b5df4b8d581a93e3b37218e16951d28858f477"
+dependencies = [
+ "erl_tokenize",
+]
+
+[[package]]
+name = "erl_pp"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "681a3f8fe4d92abac4fbb03509bd0fd83798c026431ff296e4117b914eee8ca5"
+dependencies = [
+ "erl_tokenize",
 ]
 
 [[package]]
 name = "erl_tokenize"
-version = "0.10.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "873ff4b63b4203047056e62d489c303af6337ac126f91a151d63559cf8189214"
+checksum = "49c8a534cb845537ad6da33ee9637e6486bd397abc7071260c87c87976d7516f"
 
 [[package]]
 name = "noargs"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e5dc223a8d69eaeb19c31218a69a55112fe79965764430f092532aed848f1b8"
-
-[[package]]
-name = "nojson"
-version = "0.3.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a90a4644cecb7a8b61107b516e815559a7b973ff90541a9481b7f15fd880bff"

@@ -1,40 +1,131 @@
-use crate::Ast;
-use crate::item::ItemKind;
+//! `element-bif` lint: flag `element/2` and `erlang:element/2` with a literal index.
 
+use crate::Context;
+use crate::Span;
+
+/// Lint rule that flags `element/2` used as a BIF.
 pub const RULE: crate::Rule = crate::Rule::new(
     "element-bif",
     include_str!("../rules/element-bif.md"),
     check,
 );
 
-pub fn check(ast: &Ast) -> Vec<crate::Span> {
-    assert_eq!(ast.root().kind(), ItemKind::Module); //TODO
-
+fn check(ctx: &Context) -> Vec<Span> {
     let mut errors = Vec::new();
-    for item in ast.item_views() {
-        let mut children = match item.kind() {
-            ItemKind::ModuleFunCall => {
-                let mut children = item.children();
-                if !children.next_eq(ItemKind::Atom, "erlang") {
-                    continue;
-                }
-                children
-            }
-            ItemKind::FunCall => item.children(),
-            _ => continue,
-        };
-
-        if !children.next_eq(ItemKind::Atom, "element") {
-            continue;
+    for root in ctx.tree.roots() {
+        check_node(ctx, root, &mut errors);
+        for node in root.descendants() {
+            check_node(ctx, node, &mut errors);
         }
-        if !children
-            .next_as_args(2)
-            .is_some_and(|mut args| args.next_is(ItemKind::Integer))
-        {
-            continue;
-        }
-
-        errors.push(item.span());
     }
     errors
+}
+
+fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+    if node.kind() != erl_parse::SyntaxKind::CallExpr {
+        return;
+    }
+
+    let mut children = node.children();
+    let Some(callee) = children.next() else {
+        return;
+    };
+    let Some(args) = children.next() else {
+        return;
+    };
+    if args.kind() != erl_parse::SyntaxKind::ArgumentList {
+        return;
+    }
+    if !is_element_callee(ctx, callee) {
+        return;
+    }
+
+    let args: Vec<_> = args.children().collect();
+    if args.len() != 2 {
+        return;
+    }
+    if args[0].kind() != erl_parse::SyntaxKind::IntegerExpr {
+        return;
+    }
+
+    if let Some(span) = ctx.span_of_range(node.range()) {
+        errors.push(span);
+    }
+}
+
+fn is_element_callee(ctx: &Context, callee: erl_parse::NodeView<'_>) -> bool {
+    match callee.kind() {
+        erl_parse::SyntaxKind::AtomExpr => atom_eq(ctx, callee, "element"),
+        erl_parse::SyntaxKind::RemoteExpr => {
+            let mut children = callee.children();
+            let Some(module) = children.next() else {
+                return false;
+            };
+            let Some(name) = children.next() else {
+                return false;
+            };
+            atom_eq(ctx, module, "erlang") && atom_eq(ctx, name, "element")
+        }
+        _ => false,
+    }
+}
+
+fn atom_eq(ctx: &Context, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
+    for i in node.range().as_range() {
+        let Some(token) = ctx.source_tokens.get(i) else {
+            continue;
+        };
+        if let erl_tokenize::TokenValue::Atom(name) = token.value() {
+            return name == expected;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn findings(src: &str) -> Vec<String> {
+        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
+        assert!(
+            ctx.tree.diagnostics().is_empty(),
+            "parse diagnostics: {:?}",
+            ctx.tree.diagnostics()
+        );
+        check(&ctx)
+            .into_iter()
+            .map(|s| s.text(&ctx.text).to_string())
+            .collect()
+    }
+
+    #[test]
+    fn flags_local_element_2_with_integer_index() {
+        let src = "-module(t).\nfoo(T) -> element(1, T).\n";
+        assert_eq!(findings(src), ["element(1, T)"]);
+    }
+
+    #[test]
+    fn flags_erlang_element_2() {
+        let src = "-module(t).\nfoo(T) -> erlang:element(1, T).\n";
+        assert_eq!(findings(src), ["erlang:element(1, T)"]);
+    }
+
+    #[test]
+    fn ignores_other_modules() {
+        let src = "-module(t).\nfoo(T) -> lists:element(1, T).\n";
+        assert!(findings(src).is_empty());
+    }
+
+    #[test]
+    fn ignores_wrong_arity() {
+        let src = "-module(t).\nfoo(T) -> element(1, T, extra).\n";
+        assert!(findings(src).is_empty());
+    }
+
+    #[test]
+    fn ignores_non_integer_index() {
+        let src = "-module(t).\nfoo(N, T) -> element(N, T).\n";
+        assert!(findings(src).is_empty());
+    }
 }

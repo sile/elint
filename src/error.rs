@@ -1,7 +1,7 @@
 use std::backtrace::{Backtrace, BacktraceStatus};
 use std::panic::Location;
 
-use crate::item::Span;
+use crate::span::Span;
 
 /// Error type for elint.
 ///
@@ -93,7 +93,8 @@ impl From<std::io::Error> for Error {
 impl From<erl_tokenize::Error> for Error {
     #[track_caller]
     fn from(e: erl_tokenize::Error) -> Self {
-        Self::new(Span::ZERO, e.to_string())
+        let offset = e.position.offset();
+        Self::new(Span::new(offset, offset), e.to_string())
     }
 }
 
