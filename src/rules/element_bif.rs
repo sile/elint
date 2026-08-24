@@ -72,15 +72,11 @@ fn is_element_callee(ctx: &Context, callee: erl_parse::NodeView<'_>) -> bool {
 }
 
 fn atom_eq(ctx: &Context, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
-    for i in node.range().as_range() {
-        let Some(token) = ctx.source_tokens.get(i) else {
-            continue;
-        };
-        if let erl_tokenize::TokenValue::Atom(name) = token.value() {
-            return name == expected;
-        }
-    }
-    false
+    node.tokens_in_range().any(|(i, _)| {
+        ctx.source_tokens.get(i.get()).is_some_and(|token| {
+            matches!(token.value(), erl_tokenize::TokenValue::Atom(name) if name == expected)
+        })
+    })
 }
 
 #[cfg(test)]
