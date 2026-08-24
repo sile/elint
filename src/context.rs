@@ -134,13 +134,9 @@ fn preprocess(source: erl_pp::Source) -> (Vec<erl_pp::SourceToken>, Vec<Preproce
                     .resume_conditional(branch)
                     .expect("preprocessor protocol");
             }
-            erl_pp::Event::AwaitingMacroExpansion(call) => {
-                diagnostics.push(PreprocessDiagnostic {
-                    span: source_span_to_span(call.call_site),
-                    message: format!("unknown macro '{}'", call.name.as_str()),
-                });
+            erl_pp::Event::AwaitingMacroExpansion(_call) => {
                 preprocessor
-                    .resume_macro_expansion(empty_source("<skipped-macro>"))
+                    .resume_macro_expansion(dummy_macro_source())
                     .expect("preprocessor protocol");
             }
             erl_pp::Event::Diagnostic(diagnostic) => {
@@ -165,8 +161,21 @@ fn preprocess(source: erl_pp::Source) -> (Vec<erl_pp::SourceToken>, Vec<Preproce
     (tokens, diagnostics)
 }
 
+/// Atom spliced in for an unknown macro so the file still parses.
+/// Lowercase so it scans as an atom (valid wherever a macro's value
+/// could appear), unlike efmt's uppercase `EFMT_DUMMY` which is a variable.
+const DUMMY_MACRO_ATOM: &str = "elint_dummy";
+
 fn empty_source(name: &str) -> erl_pp::Source {
     erl_pp::Source::new(name, "", Vec::new())
+}
+
+fn dummy_macro_source() -> erl_pp::Source {
+    erl_pp::Source::new(
+        "<elint-dummy-macro>",
+        DUMMY_MACRO_ATOM,
+        erl_tokenize::scan_tokens(DUMMY_MACRO_ATOM).expect("dummy atom always tokenizes"),
+    )
 }
 
 fn source_span_to_span(span: erl_pp::SourceSpan) -> Span {
@@ -217,14 +226,14 @@ mod tests {
     }
 
     #[test]
-    fn unknown_macro_is_recorded_and_may_leave_parse_diagnostics() {
+    fn unknown_macro_expands_to_dummy_atom_without_diagnostic() {
         let ctx = analyze_ok("-module(foo).\nfoo() -> ?BAR.\n");
-        assert!(
-            ctx.preprocess_diagnostics
-                .iter()
-                .any(|d| d.message.contains("BAR"))
-        );
-        assert!(!ctx.tree.diagnostics().is_empty());
+        assert!(ctx.preprocess_diagnostics.is_empty());
+        assert!(ctx.tree.diagnostics().is_empty());
+        assert!(ctx.source_tokens.iter().any(|token| matches!(
+            token.value(),
+            erl_tokenize::TokenValue::Atom(name) if name == DUMMY_MACRO_ATOM
+        )));
     }
 
     #[test]
