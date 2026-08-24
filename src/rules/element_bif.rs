@@ -1,8 +1,7 @@
 //! `element_bif` lint: flag `element/2` and `erlang:element/2` with a literal index.
 
 use super::Rule;
-use crate::Context;
-use crate::Span;
+use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags `element/2` used as a BIF.
 pub const RULE: Rule = Rule::new(
@@ -11,18 +10,18 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(ctx: &Context) -> Vec<Span> {
+fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
     let mut errors = Vec::new();
-    for root in ctx.tree.roots() {
-        check_node(ctx, root, &mut errors);
+    for root in branch.tree.roots() {
+        check_node(branch, root, &mut errors);
         for node in root.descendants() {
-            check_node(ctx, node, &mut errors);
+            check_node(branch, node, &mut errors);
         }
     }
     errors
 }
 
-fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
     if node.kind() != erl_parse::SyntaxKind::CallExpr {
         return;
     }
@@ -37,7 +36,7 @@ fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Spa
     if args.kind() != erl_parse::SyntaxKind::ArgumentList {
         return;
     }
-    if !is_element_callee(ctx, callee) {
+    if !is_element_callee(branch, callee) {
         return;
     }
 
@@ -49,14 +48,14 @@ fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Spa
         return;
     }
 
-    if let Some(span) = ctx.span_of_range(node.range()) {
+    if let Some(span) = branch.span_of_range(node.range()) {
         errors.push(span);
     }
 }
 
-fn is_element_callee(ctx: &Context, callee: erl_parse::NodeView<'_>) -> bool {
+fn is_element_callee(branch: &BranchContext, callee: erl_parse::NodeView<'_>) -> bool {
     match callee.kind() {
-        erl_parse::SyntaxKind::AtomExpr => atom_eq(ctx, callee, "element"),
+        erl_parse::SyntaxKind::AtomExpr => atom_eq(branch, callee, "element"),
         erl_parse::SyntaxKind::RemoteExpr => {
             let mut children = callee.children();
             let Some(module) = children.next() else {
@@ -65,15 +64,15 @@ fn is_element_callee(ctx: &Context, callee: erl_parse::NodeView<'_>) -> bool {
             let Some(name) = children.next() else {
                 return false;
             };
-            atom_eq(ctx, module, "erlang") && atom_eq(ctx, name, "element")
+            atom_eq(branch, module, "erlang") && atom_eq(branch, name, "element")
         }
         _ => false,
     }
 }
 
-fn atom_eq(ctx: &Context, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
+fn atom_eq(branch: &BranchContext, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
     node.tokens_in_range().any(|(i, _)| {
-        ctx.source_tokens.get(i.get()).is_some_and(|token| {
+        branch.source_tokens.get(i.get()).is_some_and(|token| {
             matches!(token.value(), erl_tokenize::TokenValue::Atom(name) if name == expected)
         })
     })
@@ -86,11 +85,11 @@ mod tests {
     fn findings(src: &str) -> Vec<String> {
         let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
         assert!(
-            ctx.tree.diagnostics().is_empty(),
+            ctx.branches[0].tree.diagnostics().is_empty(),
             "parse diagnostics: {:?}",
-            ctx.tree.diagnostics()
+            ctx.branches[0].tree.diagnostics()
         );
-        check(&ctx)
+        check(&ctx, &ctx.branches[0])
             .into_iter()
             .map(|s| s.text(&ctx.text).to_string())
             .collect()

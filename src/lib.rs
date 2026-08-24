@@ -10,7 +10,7 @@ mod context;
 mod error;
 mod span;
 
-pub use context::{Context, PreprocessDiagnostic};
+pub use context::{BranchContext, Context, PreprocessDiagnostic};
 pub use error::Error;
 pub use span::Span;
 

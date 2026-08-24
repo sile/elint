@@ -143,7 +143,7 @@ foo(T) ->
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");
         let mut expect = ExpectRules::new(&ctx).expect("expect");
-        let findings = (crate::rules::RULES[0].check)(&ctx);
+        let findings = (crate::rules::RULES[0].check)(&ctx, &ctx.branches[0]);
         assert_eq!(findings.len(), 1);
         assert!(expect.handle_error("element_bif", findings[0]));
         assert!(expect.unmatched_expectations().next().is_none());

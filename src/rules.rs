@@ -3,8 +3,7 @@
 mod element_bif;
 mod newline_after_arrow;
 
-use crate::Context;
-use crate::Span;
+use crate::{BranchContext, Context, Span};
 
 /// One lint: a name, the markdown description, and a check function.
 #[derive(Debug)]
@@ -13,8 +12,8 @@ pub struct Rule {
     pub name: &'static str,
     /// Markdown text describing the rule.
     pub text: &'static str,
-    /// Returns original-file spans that violate the rule.
-    pub check: fn(&Context) -> Vec<Span>,
+    /// Returns original-file spans that violate the rule in one branch.
+    pub check: fn(&Context, &BranchContext) -> Vec<Span>,
 }
 
 impl Rule {
@@ -22,7 +21,7 @@ impl Rule {
     pub const fn new(
         name: &'static str,
         text: &'static str,
-        check: fn(&Context) -> Vec<Span>,
+        check: fn(&Context, &BranchContext) -> Vec<Span>,
     ) -> Self {
         Self { name, text, check }
     }

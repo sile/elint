@@ -1,8 +1,7 @@
 //! `newline_after_arrow` lint: require a newline after clause `->`.
 
 use super::Rule;
-use crate::Context;
-use crate::Span;
+use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags a clause `->` with no newline before the body.
 pub const RULE: Rule = Rule::new(
@@ -11,38 +10,48 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(ctx: &Context) -> Vec<Span> {
+fn check(ctx: &Context, branch: &BranchContext) -> Vec<Span> {
     let mut errors = Vec::new();
-    for root in ctx.tree.roots() {
-        walk(ctx, root, &mut errors);
+    for root in branch.tree.roots() {
+        walk(ctx, branch, root, &mut errors);
     }
     errors
 }
 
-fn walk(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
-    if is_one_line_fun(ctx, node) {
+fn walk(
+    ctx: &Context,
+    branch: &BranchContext,
+    node: erl_parse::NodeView<'_>,
+    errors: &mut Vec<Span>,
+) {
+    if is_one_line_fun(ctx, branch, node) {
         return;
     }
-    check_node(ctx, node, errors);
+    check_node(ctx, branch, node, errors);
     for child in node.children() {
-        walk(ctx, child, errors);
+        walk(ctx, branch, child, errors);
     }
 }
 
-fn is_one_line_fun(ctx: &Context, node: erl_parse::NodeView<'_>) -> bool {
+fn is_one_line_fun(ctx: &Context, branch: &BranchContext, node: erl_parse::NodeView<'_>) -> bool {
     if !matches!(
         node.kind(),
         erl_parse::SyntaxKind::AnonymousFun | erl_parse::SyntaxKind::NamedFun
     ) {
         return false;
     }
-    let Some(span) = ctx.span_of_range(node.range()) else {
+    let Some(span) = branch.span_of_range(node.range()) else {
         return false;
     };
     !ctx.text[span.start..span.end].contains('\n')
 }
 
-fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+fn check_node(
+    ctx: &Context,
+    branch: &BranchContext,
+    node: erl_parse::NodeView<'_>,
+    errors: &mut Vec<Span>,
+) {
     if !is_clause_kind(node.kind()) {
         return;
     }
@@ -52,22 +61,22 @@ fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Spa
     else {
         return;
     };
-    let Some(body_first) = first_lexical(ctx, body.range()) else {
+    let Some(body_first) = first_lexical(branch, body.range()) else {
         return;
     };
-    let Some(arrow) = prev_lexical(ctx, body_first) else {
+    let Some(arrow) = prev_lexical(branch, body_first) else {
         return;
     };
-    if !is_right_arrow(ctx, arrow) {
+    if !is_right_arrow(branch, arrow) {
         return;
     }
-    if !is_source_origin(ctx, arrow) {
+    if !is_source_origin(branch, arrow) {
         return;
     }
-    let Some(arrow_span) = token_span(ctx, arrow) else {
+    let Some(arrow_span) = token_span(branch, arrow) else {
         return;
     };
-    let Some(body_span) = token_span(ctx, body_first) else {
+    let Some(body_span) = token_span(branch, body_first) else {
         return;
     };
     if body_span.start < arrow_span.end {
@@ -90,38 +99,44 @@ fn is_clause_kind(kind: erl_parse::SyntaxKind) -> bool {
     )
 }
 
-fn first_lexical(ctx: &Context, range: erl_parse::TokenRange) -> Option<erl_parse::TokenIndex> {
+fn first_lexical(branch: &BranchContext, range: erl_parse::TokenRange) -> Option<erl_parse::TokenIndex> {
     range.as_range().find_map(|i| {
-        ctx.tokens
+        branch
+            .tokens
             .get(i)
             .filter(|t| t.kind().is_lexical())
             .map(|_| erl_parse::TokenIndex::new(i))
     })
 }
 
-fn prev_lexical(ctx: &Context, before: erl_parse::TokenIndex) -> Option<erl_parse::TokenIndex> {
+fn prev_lexical(branch: &BranchContext, before: erl_parse::TokenIndex) -> Option<erl_parse::TokenIndex> {
     (0..before.get()).rev().find_map(|i| {
-        ctx.tokens
+        branch
+            .tokens
             .get(i)
             .filter(|t| t.kind().is_lexical())
             .map(|_| erl_parse::TokenIndex::new(i))
     })
 }
 
-fn is_right_arrow(ctx: &Context, index: erl_parse::TokenIndex) -> bool {
-    ctx.tokens.get(index.get()).is_some_and(|token| {
+fn is_right_arrow(branch: &BranchContext, index: erl_parse::TokenIndex) -> bool {
+    branch.tokens.get(index.get()).is_some_and(|token| {
         token.kind() == erl_tokenize::TokenKind::Symbol(erl_tokenize::Symbol::RightArrow)
     })
 }
 
-fn is_source_origin(ctx: &Context, index: erl_parse::TokenIndex) -> bool {
-    ctx.source_tokens
+fn is_source_origin(branch: &BranchContext, index: erl_parse::TokenIndex) -> bool {
+    branch
+        .source_tokens
         .get(index.get())
         .is_some_and(|token| matches!(token.origin(), erl_pp::Origin::Source))
 }
 
-fn token_span(ctx: &Context, index: erl_parse::TokenIndex) -> Option<Span> {
-    ctx.span_of_range(erl_parse::TokenRange::new(
+fn token_span(
+    branch: &BranchContext,
+    index: erl_parse::TokenIndex,
+) -> Option<Span> {
+    branch.span_of_range(erl_parse::TokenRange::new(
         index,
         erl_parse::TokenIndex::new(index.get() + 1),
     ))
@@ -134,11 +149,11 @@ mod tests {
     fn findings(src: &str) -> Vec<String> {
         let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
         assert!(
-            ctx.tree.diagnostics().is_empty(),
+            ctx.branches[0].tree.diagnostics().is_empty(),
             "parse diagnostics: {:?}",
-            ctx.tree.diagnostics()
+            ctx.branches[0].tree.diagnostics()
         );
-        check(&ctx)
+        check(&ctx, &ctx.branches[0])
             .into_iter()
             .map(|s| s.text(&ctx.text).to_string())
             .collect()
@@ -261,7 +276,7 @@ foo() -> ok.
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");
         let mut expect = crate::expect::ExpectRules::new(&ctx).expect("expect");
-        let spans = check(&ctx);
+        let spans = check(&ctx, &ctx.branches[0]);
         assert_eq!(spans.len(), 1);
         assert!(expect.handle_error("newline_after_arrow", spans[0]));
         assert!(expect.unmatched_expectations().next().is_none());

@@ -98,28 +98,6 @@ fn lint_file(
 
     let mut error_count = 0;
 
-    for diagnostic in &ctx.preprocess_diagnostics {
-        let (line, column, context_lines) = get_error_context(diagnostic.span.start, &ctx.text);
-        eprintln!("Preprocess: {}", diagnostic.message);
-        eprintln!("  --> {}:{}:{}", path.display(), line, column);
-        eprintln!("{context_lines}");
-        error_count += 1;
-    }
-
-    if !ctx.tree.diagnostics().is_empty() {
-        for diagnostic in ctx.tree.diagnostics() {
-            let span = ctx
-                .span_of_range(diagnostic.range())
-                .unwrap_or(elint::Span::ZERO);
-            let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
-            eprintln!("Parse: {diagnostic:?}");
-            eprintln!("  --> {}:{}:{}", path.display(), line, column);
-            eprintln!("{context_lines}");
-            error_count += 1;
-        }
-        return error_count;
-    }
-
     let mut expect = match elint::expect::ExpectRules::new(&ctx) {
         Ok(expect) => expect,
         Err(e) => {
@@ -131,25 +109,49 @@ fn lint_file(
         }
     };
 
-    for (rule, span) in check(target_lint_names, &ctx) {
-        if expect.handle_error(rule.name, span) {
+    for branch in &ctx.branches {
+        for diagnostic in &branch.preprocess_diagnostics {
+            let (line, column, context_lines) = get_error_context(diagnostic.span.start, &ctx.text);
+            eprintln!("Preprocess: {}", diagnostic.message);
+            eprintln!("  --> {}:{}:{}", path.display(), line, column);
+            eprintln!("{context_lines}");
+            error_count += 1;
+        }
+
+        if !branch.tree.diagnostics().is_empty() {
+            for diagnostic in branch.tree.diagnostics() {
+                let span = branch
+                    .span_of_range(diagnostic.range())
+                    .unwrap_or(elint::Span::ZERO);
+                let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
+                eprintln!("Parse: {diagnostic:?}");
+                eprintln!("  --> {}:{}:{}", path.display(), line, column);
+                eprintln!("{context_lines}");
+                error_count += 1;
+            }
             continue;
         }
 
-        let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
-        eprintln!("Lint Error: RULE={}", rule.name);
-        eprintln!("  --> {}:{}:{}", path.display(), line, column);
-        eprintln!("{context_lines}");
-        if !known_errors.contains(rule.name) {
-            eprintln!(
-                "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {}`",
-                rule.name
-            );
-            eprintln!("For details, run `elint explain {}`", rule.name);
-        }
+        for (rule, span) in check(target_lint_names, &ctx, branch) {
+            if expect.handle_error(rule.name, span) {
+                continue;
+            }
 
-        error_count += 1;
-        known_errors.insert(rule.name);
+            let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
+            eprintln!("Lint Error: RULE={}", rule.name);
+            eprintln!("  --> {}:{}:{}", path.display(), line, column);
+            eprintln!("{context_lines}");
+            if !known_errors.contains(rule.name) {
+                eprintln!(
+                    "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {}`",
+                    rule.name
+                );
+                eprintln!("For details, run `elint explain {}`", rule.name);
+            }
+
+            error_count += 1;
+            known_errors.insert(rule.name);
+        }
     }
 
     for (lint_name, span) in expect.unmatched_expectations() {
@@ -179,6 +181,7 @@ fn explain_rule(name: &str) -> noargs::Result<()> {
 fn check(
     target_lint_names: &[String],
     ctx: &elint::Context,
+    branch: &elint::BranchContext,
 ) -> Vec<(&'static elint::rules::Rule, elint::Span)> {
     let mut errors = Vec::new();
     for rule in elint::rules::RULES {
@@ -186,7 +189,7 @@ fn check(
             continue;
         }
 
-        for e in (rule.check)(ctx) {
+        for e in (rule.check)(ctx, branch) {
             errors.push((rule, e));
         }
     }
