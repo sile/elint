@@ -98,7 +98,7 @@ fn lint_file(
 
     let mut error_count = 0;
 
-    let mut expect = match elint::expect::ExpectRules::new(&ctx) {
+    let mut expect = match elint::expect::ExpectRules::new(&ctx, target_lint_names) {
         Ok(expect) => expect,
         Err(e) => {
             let (line, column, context_lines) = get_error_context(e.span.start, &ctx.text);
@@ -155,14 +155,12 @@ fn lint_file(
     }
 
     for rule in expect.unmatched_expectations() {
-        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == rule.name) {
-            continue;
-        }
-
         let (line, column, context_lines) = get_error_context(rule.span.start, &ctx.text);
         eprintln!(
-            "Lint Expectation Not Met: {} ({}/{}): {}",
-            rule.name, rule.target.0, rule.target.1, rule.reason
+            "Lint Expectation Not Met: {} ({}): {}",
+            rule.name,
+            rule.target.describe(),
+            rule.reason
         );
         eprintln!("  --> {}:{}:{}", path.display(), line, column);
         eprintln!("{context_lines}");

@@ -14,9 +14,13 @@ pub struct ExpectRules {
 }
 
 impl ExpectRules {
-    /// Reads `-elint_expect(Rule, {function, Name, Arity}, Reason)` forms
-    /// from the mainline tree and resolves each target function.
-    pub fn new(ctx: &Context) -> Result<Self, Error> {
+    /// Reads `-elint_expect(Rule, {function, Name, Arity} | module, Reason)`
+    /// forms from the mainline tree and resolves each target.
+    ///
+    /// When `target_lint_names` is non-empty, only expectations whose rule is
+    /// listed are validated and registered; the others are ignored. A payload
+    /// whose rule name cannot be read is still an error.
+    pub fn new(ctx: &Context, target_lint_names: &[String]) -> Result<Self, Error> {
         let branch = &ctx.branches[0];
         let functions = function_index(branch);
         let mut rules = Vec::new();
@@ -46,7 +50,7 @@ impl ExpectRules {
             else {
                 return Err(Error::new(
                     attr_span,
-                    "invalid -elint_expect payload (expected (Rule, {function, Name, Arity}, Reason))",
+                    "invalid -elint_expect payload (expected (Rule, {function, Name, Arity} | module, Reason))",
                 ));
             };
 
@@ -55,21 +59,33 @@ impl ExpectRules {
                 Err(PayloadError::Invalid) => {
                     return Err(Error::new(
                         attr_span,
-                        "invalid -elint_expect payload (expected {Rule, {function, Name, Arity}, Reason})",
+                        "invalid -elint_expect payload (expected {Rule, {function, Name, Arity} | module, Reason})",
                     ));
                 }
-                Err(PayloadError::MissingReason) => {
+                Err(PayloadError::MissingReason { rule }) => {
+                    if !wanted(&rule, target_lint_names) {
+                        continue;
+                    }
                     return Err(Error::new(attr_span, "missing reason in -elint_expect"));
                 }
             };
+            if !wanted(&parsed.rule, target_lint_names) {
+                continue;
+            }
             let Some(rule) = crate::rules::RULES.iter().find(|v| v.name == parsed.rule) else {
                 return Err(Error::new(attr_span, format!("unknown rule: {}", parsed.rule)));
             };
-            let Some(clause_spans) = functions.get(&parsed.target) else {
-                return Err(Error::new(
-                    attr_span,
-                    format!("unknown function: {}/{}", parsed.target.0, parsed.target.1),
-                ));
+            let scope_spans = match &parsed.target {
+                ExpectTarget::Function(name, arity) => {
+                    let Some(spans) = functions.get(&(name.clone(), *arity)) else {
+                        return Err(Error::new(
+                            attr_span,
+                            format!("unknown function: {name}/{arity}"),
+                        ));
+                    };
+                    spans.clone()
+                }
+                ExpectTarget::Module => vec![Span::new(0, ctx.text.len())],
             };
 
             rules.push(ExpectRule {
@@ -77,7 +93,7 @@ impl ExpectRules {
                 span: attr_span,
                 target: parsed.target,
                 reason: parsed.reason,
-                clause_spans: clause_spans.clone(),
+                scope_spans,
                 matched: false,
             });
         }
@@ -89,7 +105,7 @@ impl ExpectRules {
     pub fn handle_error(&mut self, lint_name: &'static str, span: Span) -> bool {
         let mut expected = false;
         for rule in &mut self.rules {
-            if rule.name == lint_name && rule.clause_spans.iter().any(|s| s.contains(span)) {
+            if rule.name == lint_name && rule.scope_spans.iter().any(|s| s.contains(span)) {
                 rule.matched = true;
                 expected = true;
             }
@@ -103,6 +119,25 @@ impl ExpectRules {
     }
 }
 
+/// Target of an `-elint_expect` expectation.
+#[derive(Debug)]
+pub enum ExpectTarget {
+    /// Findings inside any clause of `Name/Arity` are suppressed.
+    Function(String, u64),
+    /// Findings anywhere in the current module are suppressed.
+    Module,
+}
+
+impl ExpectTarget {
+    /// Human-readable description, e.g. `foo/1` or `module`.
+    pub fn describe(&self) -> String {
+        match self {
+            ExpectTarget::Function(name, arity) => format!("{name}/{arity}"),
+            ExpectTarget::Module => "module".into(),
+        }
+    }
+}
+
 /// One `-elint_expect` entry.
 #[derive(Debug)]
 pub struct ExpectRule {
@@ -110,13 +145,14 @@ pub struct ExpectRule {
     pub name: &'static str,
     /// Span of the attribute form that declared the expectation.
     pub span: Span,
-    /// Target function `Name/Arity`.
-    pub target: (String, u64),
+    /// Suppression target.
+    pub target: ExpectTarget,
     /// Required suppression reason.
     pub reason: String,
-    /// Spans of the target function's clauses in the original file.
-    pub clause_spans: Vec<Span>,
-    /// Whether a finding with this rule name landed inside a target clause span.
+    /// Original-file spans that scope the expectation (the target function's
+    /// clauses, or the whole file for a module target).
+    pub scope_spans: Vec<Span>,
+    /// Whether a finding with this rule name landed inside a scope span.
     pub matched: bool,
 }
 
@@ -176,16 +212,23 @@ fn is_elint_expect(branch: &BranchContext, name: NodeView<'_>) -> bool {
 /// One decoded `-elint_expect` payload.
 struct ParsedExpect {
     rule: String,
-    target: (String, u64),
+    target: ExpectTarget,
     reason: String,
+}
+
+/// Returns whether `rule` is in `target_lint_names`, or everything is wanted
+/// when the list is empty.
+fn wanted(rule: &str, target_lint_names: &[String]) -> bool {
+    target_lint_names.is_empty() || target_lint_names.iter().any(|n| n == rule)
 }
 
 /// Why a payload could not be decoded.
 enum PayloadError {
-    /// The payload is not `{Rule, {function, Name, Arity}, Reason}`.
+    /// The payload is not `{Rule, {function, Name, Arity} | module, Reason}`.
     Invalid,
-    /// The reason is missing or is not a string.
-    MissingReason,
+    /// The reason is missing or is not a string. Carries the rule name so a
+    /// caller can decide whether to report it.
+    MissingReason { rule: String },
 }
 
 /// Interprets the payload body (between the attribute's parens) by wrapping
@@ -204,13 +247,19 @@ fn parse_expect_payload(source: &str) -> Result<ParsedExpect, PayloadError> {
     let mut elements = roots[0].children();
     let rule_node = elements.next().ok_or(PayloadError::Invalid)?;
     let target_node = elements.next().ok_or(PayloadError::Invalid)?;
-    let reason_node = elements.next().ok_or(PayloadError::MissingReason)?;
+    let rule = read_term_atom(rule_node, &wrapped).ok_or(PayloadError::Invalid)?;
+    let target = read_target(target_node, &wrapped).ok_or(PayloadError::Invalid)?;
+    let reason_node = match elements.next() {
+        Some(node) => node,
+        None => return Err(PayloadError::MissingReason { rule }),
+    };
     if elements.next().is_some() {
         return Err(PayloadError::Invalid);
     }
-    let rule = read_term_atom(rule_node, &wrapped).ok_or(PayloadError::Invalid)?;
-    let target = read_target(target_node, &wrapped).ok_or(PayloadError::Invalid)?;
-    let reason = read_term_string(reason_node, &wrapped).ok_or(PayloadError::MissingReason)?;
+    let reason = match read_term_string(reason_node, &wrapped) {
+        Some(reason) => reason,
+        None => return Err(PayloadError::MissingReason { rule }),
+    };
     Ok(ParsedExpect {
         rule,
         target,
@@ -218,22 +267,30 @@ fn parse_expect_payload(source: &str) -> Result<ParsedExpect, PayloadError> {
     })
 }
 
-/// Reads `{function, Name, Arity}`.
-fn read_target(node: NodeView<'_>, source: &str) -> Option<(String, u64)> {
-    if node.kind() != SyntaxKind::TupleExpr {
-        return None;
+/// Reads the target: `{function, Name, Arity}` or `module`.
+fn read_target(node: NodeView<'_>, source: &str) -> Option<ExpectTarget> {
+    if node.kind() == SyntaxKind::TupleExpr {
+        let mut elements = node.children();
+        let tag = read_term_atom(elements.next()?, source)?;
+        if tag != "function" {
+            return None;
+        }
+        let name = read_term_atom(elements.next()?, source)?;
+        let arity = read_term_integer(elements.next()?, source)?;
+        if elements.next().is_some() {
+            return None;
+        }
+        Some(ExpectTarget::Function(name, arity))
+    } else if node.kind() == SyntaxKind::AtomExpr {
+        let name = read_term_atom(node, source)?;
+        if name == "module" {
+            Some(ExpectTarget::Module)
+        } else {
+            None
+        }
+    } else {
+        None
     }
-    let mut elements = node.children();
-    let tag = read_term_atom(elements.next()?, source)?;
-    if tag != "function" {
-        return None;
-    }
-    let name = read_term_atom(elements.next()?, source)?;
-    let arity = read_term_integer(elements.next()?, source)?;
-    if elements.next().is_some() {
-        return None;
-    }
-    Some((name, arity))
 }
 
 fn read_term_atom(node: NodeView<'_>, source: &str) -> Option<String> {
@@ -294,14 +351,17 @@ foo(T) ->
     element(1, T).
 ";
         let ctx = analyze(src);
-        let mut expect = ExpectRules::new(&ctx).expect("expect");
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         assert_eq!(expect.rules.len(), 1);
         assert_eq!(expect.rules[0].name, "element_bif");
-        assert_eq!(expect.rules[0].target, ("foo".into(), 1));
+        assert!(matches!(
+            expect.rules[0].target,
+            ExpectTarget::Function(ref name, 1) if name == "foo"
+        ));
         assert_eq!(expect.rules[0].reason, "dynamic tuple shape");
-        assert_eq!(expect.rules[0].clause_spans.len(), 1);
+        assert_eq!(expect.rules[0].scope_spans.len(), 1);
         assert_eq!(
-            expect.rules[0].clause_spans[0].text(&ctx.text),
+            expect.rules[0].scope_spans[0].text(&ctx.text),
             "foo(T) ->\n    element(1, T)"
         );
 
@@ -322,7 +382,7 @@ foo(T) ->
     element(1, T).
 ";
         let ctx = analyze(src);
-        let mut expect = ExpectRules::new(&ctx).expect("expect");
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         let spans = element_bif_findings(&ctx);
         assert_eq!(spans.len(), 1);
         assert!(expect.handle_error("element_bif", spans[0]));
@@ -340,7 +400,7 @@ bar(T) ->
     element(1, T).
 ";
         let ctx = analyze(src);
-        let mut expect = ExpectRules::new(&ctx).expect("expect");
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         let spans = element_bif_findings(&ctx);
         assert_eq!(spans.len(), 2);
         assert!(expect.handle_error("element_bif", spans[0]));
@@ -356,7 +416,7 @@ bar(T) ->
 foo() -> ok.
 ";
         let ctx = analyze(src);
-        let mut expect = ExpectRules::new(&ctx).expect("expect");
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         assert_eq!(expect.rules.len(), 1);
         let spans = element_bif_findings(&ctx);
         assert!(spans.is_empty());
@@ -376,13 +436,68 @@ bar(T) ->
     element(1, T).
 ";
         let ctx = analyze(src);
-        let mut expect = ExpectRules::new(&ctx).expect("expect");
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         assert_eq!(expect.rules.len(), 2);
         let spans = element_bif_findings(&ctx);
         assert_eq!(spans.len(), 2);
         assert!(expect.handle_error("element_bif", spans[0]));
         assert!(expect.handle_error("element_bif", spans[1]));
         assert!(expect.unmatched_expectations().next().is_none());
+    }
+
+    #[test]
+    fn module_target_suppresses_finding_anywhere() {
+        let src = "\
+-module(t).
+-elint_expect(element_bif, module, \"dynamic tuple shape\").
+foo(T) ->
+    element(1, T).
+bar(T) ->
+    element(1, T).
+";
+        let ctx = analyze(src);
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
+        assert_eq!(expect.rules.len(), 1);
+        assert!(matches!(expect.rules[0].target, ExpectTarget::Module));
+        assert_eq!(
+            expect.rules[0].scope_spans,
+            vec![Span::new(0, ctx.text.len())]
+        );
+        let spans = element_bif_findings(&ctx);
+        assert_eq!(spans.len(), 2);
+        assert!(expect.handle_error("element_bif", spans[0]));
+        assert!(expect.handle_error("element_bif", spans[1]));
+        assert!(expect.unmatched_expectations().next().is_none());
+    }
+
+    #[test]
+    fn module_target_still_requires_rule_name_match() {
+        let src = "\
+-module(t).
+-elint_expect(element_bif, module, \"dynamic tuple shape\").
+foo() ->
+    ok.
+";
+        let ctx = analyze(src);
+        let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
+        assert!(!expect.handle_error("newline_after_arrow", Span::new(0, 0)));
+        assert_eq!(expect.unmatched_expectations().count(), 1);
+    }
+
+    #[test]
+    fn unknown_target_tag_is_an_error() {
+        let src = "\
+-module(t).
+-elint_expect(element_bif, {record, foo}, \"reason\").
+foo() ->
+    ok.
+";
+        let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
+        assert!(
+            err.reason.contains("invalid -elint_expect payload"),
+            "{:?}",
+            err.reason
+        );
     }
 
     #[test]
@@ -393,7 +508,7 @@ bar(T) ->
 foo(T) ->
     element(1, T).
 ";
-        let err = ExpectRules::new(&analyze(src)).expect_err("expect must fail");
+        let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
         assert!(err.reason.contains("missing reason"), "{:?}", err.reason);
     }
 
@@ -405,7 +520,7 @@ foo(T) ->
 foo() ->
     ok.
 ";
-        let err = ExpectRules::new(&analyze(src)).expect_err("expect must fail");
+        let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
         assert!(err.reason.contains("unknown rule"), "{:?}", err.reason);
     }
 
@@ -417,7 +532,7 @@ foo() ->
 foo() ->
     ok.
 ";
-        let err = ExpectRules::new(&analyze(src)).expect_err("expect must fail");
+        let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
         assert!(err.reason.contains("unknown function"), "{:?}", err.reason);
     }
 
@@ -429,7 +544,89 @@ foo() ->
 foo() ->
     ok.
 ";
-        let err = ExpectRules::new(&analyze(src)).expect_err("expect must fail");
+        let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
         assert!(err.reason.contains("invalid -elint_expect payload"), "{:?}", err.reason);
+    }
+
+    #[test]
+    fn filter_ignores_expectations_for_unlinted_rules() {
+        let src = "\
+-module(t).
+-elint_expect(newline_after_arrow, {function, foo, 0}, \"one-line clause\").
+foo() -> ok.
+";
+        let ctx = analyze(src);
+        let expect = ExpectRules::new(&ctx, &["element_bif".to_string()]).expect("expect");
+        assert!(expect.rules.is_empty());
+        assert!(expect.unmatched_expectations().next().is_none());
+    }
+
+    #[test]
+    fn filter_ignores_unknown_rule_outside_the_filter() {
+        let src = "\
+-module(t).
+-elint_expect(no_such_rule, {function, foo, 0}, \"reason\").
+foo() ->
+    ok.
+";
+        let ctx = analyze(src);
+        let expect = ExpectRules::new(&ctx, &["element_bif".to_string()]).expect("expect");
+        assert!(expect.rules.is_empty());
+    }
+
+    #[test]
+    fn filter_ignores_missing_reason_outside_the_filter() {
+        let src = "\
+-module(t).
+-elint_expect(newline_after_arrow, {function, foo, 0}).
+foo() ->
+    ok.
+";
+        let ctx = analyze(src);
+        let expect = ExpectRules::new(&ctx, &["element_bif".to_string()]).expect("expect");
+        assert!(expect.rules.is_empty());
+    }
+
+    #[test]
+    fn filter_ignores_unknown_function_outside_the_filter() {
+        let src = "\
+-module(t).
+-elint_expect(newline_after_arrow, {function, no_such, 0}, \"reason\").
+foo() ->
+    ok.
+";
+        let ctx = analyze(src);
+        let expect = ExpectRules::new(&ctx, &["element_bif".to_string()]).expect("expect");
+        assert!(expect.rules.is_empty());
+    }
+
+    #[test]
+    fn filter_keeps_validation_for_linted_rules() {
+        let src = "\
+-module(t).
+-elint_expect(no_such_rule, {function, foo, 0}, \"reason\").
+foo() ->
+    ok.
+";
+        let err = ExpectRules::new(&analyze(src), &["no_such_rule".to_string()])
+            .expect_err("expect must fail");
+        assert!(err.reason.contains("unknown rule"), "{:?}", err.reason);
+    }
+
+    #[test]
+    fn filter_keeps_invalid_payload_error_even_when_filtered() {
+        let src = "\
+-module(t).
+-elint_expect(123, module, \"reason\").
+foo() ->
+    ok.
+";
+        let err = ExpectRules::new(&analyze(src), &["element_bif".to_string()])
+            .expect_err("expect must fail");
+        assert!(
+            err.reason.contains("invalid -elint_expect payload"),
+            "{:?}",
+            err.reason
+        );
     }
 }

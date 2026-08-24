@@ -275,7 +275,7 @@ foo() ->
 foo() -> ok.
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");
-        let mut expect = crate::expect::ExpectRules::new(&ctx).expect("expect");
+        let mut expect = crate::expect::ExpectRules::new(&ctx, &[]).expect("expect");
         let spans = check(&ctx, &ctx.branches[0]);
         assert_eq!(spans.len(), 1);
         assert!(expect.handle_error("newline_after_arrow", spans[0]));

@@ -8,12 +8,13 @@ that never matched a finding as `Lint Expectation Not Met`.
 -elint_expect(element_bif, {function, foo, 1}, "dynamic tuple shape").
 ```
 
-The payload is a tuple `{Rule, {function, Name, Arity}, Reason}`:
+The payload is a tuple `{Rule, Target, Reason}`:
 
 - `Rule` is the atom name of the lint rule.
-- `{function, Name, Arity}` selects the target: a finding is suppressed when
-  it lies inside one of the `Name/Arity` clauses. The target tuple is
-  open-ended; other tags such as `{module, M}` or `{record, R}` may be added
+- `Target` selects the scope. It is either `{function, Name, Arity}`, which
+  suppresses findings inside the `Name/Arity` clauses, or the bare atom
+  `module`, which suppresses findings anywhere in the current module. The
+  target forms are open-ended; other tags such as `{record, R}` may be added
   later.
 - `Reason` is a required string explaining why the finding is acceptable. A
   declaration without a reason is an error, as are an unknown rule name and
@@ -21,6 +22,11 @@ The payload is a tuple `{Rule, {function, Name, Arity}, Reason}`:
 
 One attribute covers one rule for one function. Write several attributes to
 suppress several rules, or several functions, in the same file.
+
+When `elint -l RULE` restricts linting to a rule, only expectations for that
+rule are validated and reported; `-elint_expect` declarations for other rules
+are ignored entirely. An expectation whose rule name cannot be read is an
+error regardless of `-l`.
 
 Expectations are read from the mainline branch only (the branch that takes
 `Branch::Then` at every conditional), while findings from every branch are
