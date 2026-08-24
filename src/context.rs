@@ -114,8 +114,10 @@ impl BranchContext {
     /// including nested calls.
     pub fn syntax_spans(&self) -> Vec<Span> {
         let mut spans = Vec::new();
-        for root in self.tree.roots() {
-            push_node_spans(self, root, &mut spans);
+        for node in self.tree.nodes() {
+            if let Some(span) = self.span_of_range(node.range()) {
+                spans.push(span);
+            }
         }
         spans
     }
@@ -123,15 +125,6 @@ impl BranchContext {
     fn span_of_token(&self, index: usize) -> Option<Span> {
         let token = self.source_tokens.get(index)?;
         span_in_original_file(token.origin(), token.source_span())
-    }
-}
-
-fn push_node_spans(branch: &BranchContext, node: erl_parse::NodeView<'_>, spans: &mut Vec<Span>) {
-    if let Some(span) = branch.span_of_range(node.range()) {
-        spans.push(span);
-    }
-    for child in node.children() {
-        push_node_spans(branch, child, spans);
     }
 }
 

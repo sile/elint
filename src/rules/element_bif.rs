@@ -12,11 +12,8 @@ pub const RULE: Rule = Rule::new(
 
 fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
     let mut errors = Vec::new();
-    for root in branch.tree.roots() {
-        check_node(branch, root, &mut errors);
-        for node in root.descendants() {
-            check_node(branch, node, &mut errors);
-        }
+    for node in branch.tree.nodes() {
+        check_node(branch, node, &mut errors);
     }
     errors
 }
