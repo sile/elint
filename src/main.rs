@@ -12,6 +12,22 @@ fn main() -> noargs::Result<()> {
     }
     noargs::HELP_FLAG.take_help(&mut args);
 
+    if noargs::cmd("explain")
+        .doc("Print the markdown description of a lint rule")
+        .take(&mut args)
+        .is_present()
+    {
+        let name: String = noargs::arg("<RULE_NAME>")
+            .take(&mut args)
+            .then(|a| Ok::<_, &str>(a.value().to_string()))?;
+        if let Some(help) = args.finish()? {
+            print!("{help}");
+            return Ok(());
+        }
+        explain_rule(&name)?;
+        return Ok(());
+    }
+
     let mut target_lint_names: Vec<String> = Vec::new();
     while let Some(a) = noargs::opt("lint")
         .short('l')
@@ -129,8 +145,7 @@ fn lint_file(
                 "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {}`",
                 rule.name
             );
-            eprintln!("\nLint Rule Details\n=======\n\n{}\n", rule.text.trim());
-            eprintln!("------\n");
+            eprintln!("For details, run `elint explain {}`", rule.name);
         }
 
         error_count += 1;
@@ -150,6 +165,15 @@ fn lint_file(
     }
 
     error_count
+}
+
+fn explain_rule(name: &str) -> noargs::Result<()> {
+    let Some(rule) = elint::rules::RULES.iter().find(|rule| rule.name == name) else {
+        eprintln!("unknown lint rule: {name}");
+        std::process::exit(1);
+    };
+    print!("{}", rule.text);
+    Ok(())
 }
 
 fn check(

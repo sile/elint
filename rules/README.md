@@ -64,3 +64,5 @@ elint --lint <name> rules/<name>/ok.erl
 
 `ng.erl` must produce findings and a non-zero exit.
 `ok.erl` must produce no findings and a zero exit.
+
+`elint explain <name>` prints `rules/<name>/rule.md`.
