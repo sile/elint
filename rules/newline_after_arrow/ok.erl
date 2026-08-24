@@ -9,7 +9,9 @@
     maybe_else/0,
     anon_fun/0,
     map_and_maybe_match/0,
-    comment_then_newline/0
+    comment_then_newline/0,
+    one_line_anon_fun/0,
+    one_line_named_fun/0
 ]).
 
 -spec function_clause() -> ok.
@@ -57,6 +59,12 @@ anon_fun() ->
     fun() ->
         ok
     end.
+
+one_line_anon_fun() ->
+    fun() -> ok end.
+
+one_line_named_fun() ->
+    fun F() -> ok end.
 
 map_and_maybe_match() ->
     _ = #{a => b},

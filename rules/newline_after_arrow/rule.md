@@ -24,6 +24,8 @@ It does not report:
 - type `fun((...) -> ...)` arrows
 - map `=>` and `maybe` `?=`
 - `->` tokens that did not originate in the source file (macro expansion)
+- a `->` in an anonymous or named `fun` whose entire `fun ... end` expression
+  is on a single line
 
 ## Why restrict this?
 

@@ -14,12 +14,32 @@ pub const RULE: Rule = Rule::new(
 fn check(ctx: &Context) -> Vec<Span> {
     let mut errors = Vec::new();
     for root in ctx.tree.roots() {
-        check_node(ctx, root, &mut errors);
-        for node in root.descendants() {
-            check_node(ctx, node, &mut errors);
-        }
+        walk(ctx, root, &mut errors);
     }
     errors
+}
+
+fn walk(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+    if is_one_line_fun(ctx, node) {
+        return;
+    }
+    check_node(ctx, node, errors);
+    for child in node.children() {
+        walk(ctx, child, errors);
+    }
+}
+
+fn is_one_line_fun(ctx: &Context, node: erl_parse::NodeView<'_>) -> bool {
+    if !matches!(
+        node.kind(),
+        erl_parse::SyntaxKind::AnonymousFun | erl_parse::SyntaxKind::NamedFun
+    ) {
+        return false;
+    }
+    let Some(span) = ctx.span_of_range(node.range()) else {
+        return false;
+    };
+    !ctx.text[span.start..span.end].contains('\n')
 }
 
 fn check_node(ctx: &Context, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
@@ -159,8 +179,20 @@ mod tests {
     }
 
     #[test]
-    fn flags_inline_fun_clause() {
+    fn ignores_one_line_anon_fun_clause() {
         let src = "-module(t).\nfoo() ->\n    fun() -> ok end.\n";
+        assert!(findings(src).is_empty());
+    }
+
+    #[test]
+    fn ignores_one_line_named_fun_clause() {
+        let src = "-module(t).\nfoo() ->\n    fun F() -> ok end.\n";
+        assert!(findings(src).is_empty());
+    }
+
+    #[test]
+    fn flags_multi_line_fun_clause_without_newline() {
+        let src = "-module(t).\nfoo() ->\n    fun(X) -> X + 1\n    end.\n";
         assert_eq!(finding_count(src), 1);
     }
 

@@ -52,4 +52,5 @@ nested() ->
     end.
 
 anon_fun() ->
-    fun() -> ok end.
+    fun() -> ok
+    end.
