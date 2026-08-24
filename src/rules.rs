@@ -1,6 +1,7 @@
 //! Lint rules.
 
 mod element_bif;
+mod newline_after_arrow;
 
 use crate::Context;
 use crate::Span;
@@ -28,4 +29,4 @@ impl Rule {
 }
 
 /// Registered lint rules.
-pub const RULES: &[Rule] = &[element_bif::RULE];
+pub const RULES: &[Rule] = &[element_bif::RULE, newline_after_arrow::RULE];
