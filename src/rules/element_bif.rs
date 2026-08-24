@@ -71,7 +71,7 @@ fn is_element_callee(branch: &BranchContext, callee: erl_parse::NodeView<'_>) ->
 }
 
 fn atom_eq(branch: &BranchContext, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
-    node.tokens_in_range().any(|(i, _)| {
+    node.range().any(|i| {
         branch.source_tokens.get(i.get()).is_some_and(|token| {
             matches!(token.value(), erl_tokenize::TokenValue::Atom(name) if name == expected)
         })

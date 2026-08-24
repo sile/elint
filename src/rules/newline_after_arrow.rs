@@ -99,13 +99,13 @@ fn is_clause_kind(kind: erl_parse::SyntaxKind) -> bool {
     )
 }
 
-fn first_lexical(branch: &BranchContext, range: erl_parse::TokenRange) -> Option<erl_parse::TokenIndex> {
-    range.as_range().find_map(|i| {
+fn first_lexical(branch: &BranchContext, mut range: erl_parse::TokenRange) -> Option<erl_parse::TokenIndex> {
+    range.find_map(|i| {
         branch
             .tokens
-            .get(i)
+            .get(i.get())
             .filter(|t| t.kind().is_lexical())
-            .map(|_| erl_parse::TokenIndex::new(i))
+            .map(|_| i)
     })
 }
 

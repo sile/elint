@@ -14,9 +14,9 @@ dependencies = [
 
 [[package]]
 name = "erl_parse"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e88bcdeb3cf44a669294ed19a9b5df4b8d581a93e3b37218e16951d28858f477"
+checksum = "750d1b6c089f142ed9a354a06e4cfc772dd91df9f247e578dcbb33009a45ea6b"
 dependencies = [
  "erl_tokenize",
 ]

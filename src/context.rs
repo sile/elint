@@ -100,8 +100,8 @@ impl BranchContext {
 
         let mut start = None;
         let mut end = None;
-        for i in range.as_range() {
-            let Some(s) = self.span_of_token(i) else {
+        for i in range {
+            let Some(s) = self.span_of_token(i.get()) else {
                 continue;
             };
             start = Some(start.map_or(s.start, |t: usize| t.min(s.start)));
