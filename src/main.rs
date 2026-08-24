@@ -143,7 +143,7 @@ fn lint_file(
             eprintln!("{context_lines}");
             if !known_errors.contains(rule.name) {
                 eprintln!(
-                    "To suppress this error, add a preceding comment `%% ELINT_EXPECT: {}`",
+                    "To suppress this error, add `-elint_expect({}, {{function, Name, Arity}}, \"reason\").`",
                     rule.name
                 );
                 eprintln!("For details, run `elint explain {}`", rule.name);
@@ -154,13 +154,16 @@ fn lint_file(
         }
     }
 
-    for (lint_name, span) in expect.unmatched_expectations() {
-        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == lint_name) {
+    for rule in expect.unmatched_expectations() {
+        if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == rule.name) {
             continue;
         }
 
-        let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
-        eprintln!("Lint Expectation Not Met: RULE={lint_name}");
+        let (line, column, context_lines) = get_error_context(rule.span.start, &ctx.text);
+        eprintln!(
+            "Lint Expectation Not Met: {} ({}/{}): {}",
+            rule.name, rule.target.0, rule.target.1, rule.reason
+        );
         eprintln!("  --> {}:{}:{}", path.display(), line, column);
         eprintln!("{context_lines}");
         error_count += 1;

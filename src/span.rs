@@ -2,7 +2,7 @@
 
 /// Half-open byte range `[start, end)` in the original source text.
 ///
-/// Tree positions use `erl_parse` token ranges. Findings, `ELINT_EXPECT`,
+/// Tree positions use `erl_parse` token ranges. Findings, `-elint_expect`,
 /// and CLI line/column reporting map those ranges down to this type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Span {

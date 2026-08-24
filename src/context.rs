@@ -74,12 +74,6 @@ impl Context {
             branches,
         })
     }
-
-    /// Original-file byte range of every syntax node in the mainline branch,
-    /// including nested calls.
-    pub fn syntax_spans(&self) -> Vec<Span> {
-        self.branches[0].syntax_spans()
-    }
 }
 
 impl BranchContext {
@@ -108,18 +102,6 @@ impl BranchContext {
             end = Some(end.map_or(s.end, |t: usize| t.max(s.end)));
         }
         Some(Span::new(start?, end?))
-    }
-
-    /// Original-file byte range of every syntax node in this branch's forest,
-    /// including nested calls.
-    pub fn syntax_spans(&self) -> Vec<Span> {
-        let mut spans = Vec::new();
-        for node in self.tree.nodes() {
-            if let Some(span) = self.span_of_range(node.range()) {
-                spans.push(span);
-            }
-        }
-        spans
     }
 
     fn span_of_token(&self, index: usize) -> Option<Span> {

@@ -271,7 +271,7 @@ foo() ->
     fn elint_expect_suppresses_finding() {
         let src = "\
 -module(t).
-%% ELINT_EXPECT: newline_after_arrow
+-elint_expect(newline_after_arrow, {function, foo, 0}, \"one-line clause\").
 foo() -> ok.
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");

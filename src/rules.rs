@@ -8,7 +8,7 @@ use crate::{BranchContext, Context, Span};
 /// One lint: a name, the markdown description, and a check function.
 #[derive(Debug)]
 pub struct Rule {
-    /// Canonical name used in CLI output and `ELINT_EXPECT`.
+    /// Canonical name used in CLI output and `-elint_expect`.
     pub name: &'static str,
     /// Markdown text describing the rule.
     pub text: &'static str,
