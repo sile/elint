@@ -75,6 +75,7 @@ fn main() -> noargs::Result<()> {
         return Ok(());
     }
 
+    let default_paths = paths.is_empty();
     if paths.is_empty() {
         paths.push("src/".into());
         paths.push("tests/".into());
@@ -83,6 +84,11 @@ fn main() -> noargs::Result<()> {
     let mut error_count = 0;
     let mut known_errors = std::collections::HashSet::new();
     for path in paths {
+        if !default_paths && !path.exists() {
+            eprintln!("error: no such file or directory: {}", path.display());
+            error_count += 1;
+            continue;
+        }
         for path in elint::fs::collect_erlang_files(path)? {
             error_count += lint_file(&path, &target_lint_names, &mut known_errors);
         }
@@ -230,9 +236,16 @@ fn print_doc(name: &str) {
 }
 
 fn print_doc_list() {
+    println!("{}", doc_list());
+}
+
+fn doc_list() -> String {
+    let mut out = String::from("Available documents:\n");
     for (name, description, _) in DOCS {
-        println!("{name} - {description}");
+        out.push_str(&format!("- {name}: {description}\n"));
     }
+    out.push_str("\nRun `elint doc <name>` to print one.\n");
+    out
 }
 
 fn check(
@@ -286,4 +299,22 @@ fn report(
         span,
         note,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doc_list_lists_every_document() {
+        let out = doc_list();
+        for (name, _, _) in DOCS {
+            assert!(out.contains(&format!("- {name}:")), "{out:?}");
+        }
+        assert!(out.starts_with("Available documents:\n"), "{out:?}");
+        assert!(
+            out.ends_with("\nRun `elint doc <name>` to print one.\n"),
+            "{out:?}"
+        );
+    }
 }
