@@ -2,6 +2,7 @@
 
 mod element_bif;
 mod newline_after_arrow;
+mod strict_generator;
 
 use crate::{BranchContext, Context, Span};
 
@@ -38,4 +39,30 @@ impl Rule {
 }
 
 /// Registered lint rules.
-pub const RULES: &[Rule] = &[element_bif::RULE, newline_after_arrow::RULE];
+pub const RULES: &[Rule] = &[
+    element_bif::RULE,
+    newline_after_arrow::RULE,
+    strict_generator::RULE,
+];
+
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::*;
+
+    /// Runs a rule's `check` against `src` and returns the finding texts.
+    pub(crate) fn findings(
+        check: fn(&Context, &BranchContext) -> Vec<Span>,
+        src: &str,
+    ) -> Vec<String> {
+        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
+        assert!(
+            ctx.branches[0].tree.diagnostics().is_empty(),
+            "parse diagnostics: {:?}",
+            ctx.branches[0].tree.diagnostics()
+        );
+        check(&ctx, &ctx.branches[0])
+            .into_iter()
+            .map(|s| s.text(&ctx.text).to_string())
+            .collect()
+    }
+}

@@ -99,7 +99,10 @@ fn is_clause_kind(kind: erl_parse::SyntaxKind) -> bool {
     )
 }
 
-fn first_lexical(branch: &BranchContext, mut range: erl_parse::TokenRange) -> Option<erl_parse::TokenIndex> {
+fn first_lexical(
+    branch: &BranchContext,
+    mut range: erl_parse::TokenRange,
+) -> Option<erl_parse::TokenIndex> {
     range.find_map(|i| {
         branch
             .tokens
@@ -109,7 +112,10 @@ fn first_lexical(branch: &BranchContext, mut range: erl_parse::TokenRange) -> Op
     })
 }
 
-fn prev_lexical(branch: &BranchContext, before: erl_parse::TokenIndex) -> Option<erl_parse::TokenIndex> {
+fn prev_lexical(
+    branch: &BranchContext,
+    before: erl_parse::TokenIndex,
+) -> Option<erl_parse::TokenIndex> {
     (0..before.get()).rev().find_map(|i| {
         branch
             .tokens
@@ -132,10 +138,7 @@ fn is_source_origin(branch: &BranchContext, index: erl_parse::TokenIndex) -> boo
         .is_some_and(|token| matches!(token.origin(), erl_pp::Origin::Source))
 }
 
-fn token_span(
-    branch: &BranchContext,
-    index: erl_parse::TokenIndex,
-) -> Option<Span> {
+fn token_span(branch: &BranchContext, index: erl_parse::TokenIndex) -> Option<Span> {
     branch.span_of_range(erl_parse::TokenRange::new(
         index,
         erl_parse::TokenIndex::new(index.get() + 1),
@@ -145,28 +148,16 @@ fn token_span(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn findings(src: &str) -> Vec<String> {
-        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
-        assert!(
-            ctx.branches[0].tree.diagnostics().is_empty(),
-            "parse diagnostics: {:?}",
-            ctx.branches[0].tree.diagnostics()
-        );
-        check(&ctx, &ctx.branches[0])
-            .into_iter()
-            .map(|s| s.text(&ctx.text).to_string())
-            .collect()
-    }
+    use crate::rules::test_support::findings;
 
     fn finding_count(src: &str) -> usize {
-        findings(src).len()
+        findings(check, src).len()
     }
 
     #[test]
     fn flags_inline_function_clause() {
         let src = "-module(t).\nfoo() -> ok.\n";
-        assert_eq!(findings(src), ["->"]);
+        assert_eq!(findings(check, src), ["->"]);
     }
 
     #[test]
@@ -196,13 +187,13 @@ mod tests {
     #[test]
     fn ignores_one_line_anon_fun_clause() {
         let src = "-module(t).\nfoo() ->\n    fun() -> ok end.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_one_line_named_fun_clause() {
         let src = "-module(t).\nfoo() ->\n    fun F() -> ok end.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
@@ -229,19 +220,19 @@ foo() ->
     #[test]
     fn ignores_newline_after_arrow() {
         let src = "-module(t).\nfoo() ->\n    ok.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_same_line_comment_then_newline() {
         let src = "-module(t).\nfoo() -> % note\n    ok.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_spec_arrow() {
         let src = "-module(t).\n-spec foo() -> ok.\nfoo() ->\n    ok.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
@@ -258,13 +249,13 @@ foo() ->
             error
     end.
 ";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_macro_expanded_arrow() {
         let src = "-module(t).\n-define(F, f() -> ok).\n?F.\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
@@ -291,6 +282,6 @@ foo() -> ok.
     #[test]
     fn ok_fixture_has_no_findings() {
         let src = include_str!("../../rules/newline_after_arrow/ok.erl");
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 }

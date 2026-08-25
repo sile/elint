@@ -78,59 +78,47 @@ fn atom_eq(branch: &BranchContext, node: erl_parse::NodeView<'_>, expected: &str
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn findings(src: &str) -> Vec<String> {
-        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
-        assert!(
-            ctx.branches[0].tree.diagnostics().is_empty(),
-            "parse diagnostics: {:?}",
-            ctx.branches[0].tree.diagnostics()
-        );
-        check(&ctx, &ctx.branches[0])
-            .into_iter()
-            .map(|s| s.text(&ctx.text).to_string())
-            .collect()
-    }
+    use crate::rules::test_support::findings;
 
     #[test]
     fn flags_local_element_2_with_integer_index() {
         let src = "-module(t).\nfoo(T) -> element(1, T).\n";
-        assert_eq!(findings(src), ["element(1, T)"]);
+        assert_eq!(findings(check, src), ["element(1, T)"]);
     }
 
     #[test]
     fn flags_erlang_element_2() {
         let src = "-module(t).\nfoo(T) -> erlang:element(1, T).\n";
-        assert_eq!(findings(src), ["erlang:element(1, T)"]);
+        assert_eq!(findings(check, src), ["erlang:element(1, T)"]);
     }
 
     #[test]
     fn ignores_other_modules() {
         let src = "-module(t).\nfoo(T) -> lists:element(1, T).\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_wrong_arity() {
         let src = "-module(t).\nfoo(T) -> element(1, T, extra).\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ignores_non_integer_index() {
         let src = "-module(t).\nfoo(N, T) -> element(N, T).\n";
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]
     fn ng_fixture_has_two_findings() {
         let src = include_str!("../../rules/element_bif/ng.erl");
-        assert_eq!(findings(src).len(), 2);
+        assert_eq!(findings(check, src).len(), 2);
     }
 
     #[test]
     fn ok_fixture_has_no_findings() {
         let src = include_str!("../../rules/element_bif/ok.erl");
-        assert!(findings(src).is_empty());
+        assert!(findings(check, src).is_empty());
     }
 }
