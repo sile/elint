@@ -184,16 +184,16 @@ fn preprocess(
                         .resume_macro_expansion(dummy_macro_source())
                         .expect("preprocessor protocol");
                 }
-                erl_pp::Event::Diagnostic(diagnostic) => {
-                    fork.diagnostics.push(PreprocessDiagnostic {
-                        span: source_span_to_span(diagnostic.directive_span),
-                        message: format!("{:?}", diagnostic.severity),
-                    });
+                erl_pp::Event::Diagnostic(_) => {
+                    // `-error` / `-warning` directives are deliberately
+                    // ignored: every conditional arm is scanned, so these
+                    // directives would always be hit, and judging them is
+                    // the compiler's job, not a linter's.
                 }
                 erl_pp::Event::PreprocessError(error) => {
                     fork.diagnostics.push(PreprocessDiagnostic {
                         span: source_span_to_span(error.span()),
-                        message: format!("{error:?}"),
+                        message: preprocess_error_message(&error),
                     });
                 }
                 erl_pp::Event::MacroDefined(_) | erl_pp::Event::MacroUndefined(_) => {}
@@ -233,6 +233,43 @@ fn dummy_macro_source() -> erl_pp::Source {
 
 fn source_span_to_span(span: erl_pp::SourceSpan) -> Span {
     Span::new(span.start.offset(), span.end.offset())
+}
+
+/// Human-readable description of a preprocessor structural error.
+fn preprocess_error_message(error: &erl_pp::PreprocessError) -> String {
+    match error {
+        erl_pp::PreprocessError::ParseUnexpectedToken { expected, .. } => {
+            format!("unexpected token in directive; expected {expected}")
+        }
+        erl_pp::PreprocessError::ParseUnexpectedEof { expected, .. } => {
+            format!("unexpected end of file in directive; expected {expected}")
+        }
+        erl_pp::PreprocessError::DuplicateParameter { name, .. } => {
+            format!("duplicate macro parameter: {}", name.as_str())
+        }
+        erl_pp::PreprocessError::ArityMismatch { name, .. } => {
+            format!("macro arity mismatch: {}", name.as_str())
+        }
+        erl_pp::PreprocessError::UnclosedArgument { .. } => "unclosed macro argument".into(),
+        erl_pp::PreprocessError::LeadingEmptyArgument { .. } => {
+            "leading empty macro argument".into()
+        }
+        erl_pp::PreprocessError::TrailingEmptyArgument { .. } => {
+            "trailing empty macro argument".into()
+        }
+        erl_pp::PreprocessError::InvalidStringificationTarget { .. } => {
+            "invalid stringification target".into()
+        }
+        erl_pp::PreprocessError::CircularExpansion { name, .. } => {
+            format!("circular macro expansion: {name}")
+        }
+        erl_pp::PreprocessError::StrayElse { .. } => "stray -else".into(),
+        erl_pp::PreprocessError::StrayEndif { .. } => "stray -endif".into(),
+        erl_pp::PreprocessError::DoubleElse { .. } => "double -else".into(),
+        erl_pp::PreprocessError::UnclosedConditional { .. } => "unclosed conditional".into(),
+        erl_pp::PreprocessError::StrayElif { .. } => "stray -elif".into(),
+        erl_pp::PreprocessError::ElifAfterElse { .. } => "-elif after -else".into(),
+    }
 }
 
 fn span_in_original_file(origin: &erl_pp::Origin, span: erl_pp::SourceSpan) -> Option<Span> {

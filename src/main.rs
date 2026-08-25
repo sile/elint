@@ -1,5 +1,10 @@
 //! Erlang code linter CLI.
 
+use std::path::Path;
+
+use elint::diagnostic::{Color, Source};
+use elint::Span;
+
 fn main() -> noargs::Result<()> {
     let mut args = noargs::raw_args();
 
@@ -65,7 +70,7 @@ fn main() -> noargs::Result<()> {
     }
 
     if error_count > 0 {
-        eprintln!("Found {error_count} lint error(s)");
+        eprintln!("Found {error_count} error(s)");
         std::process::exit(1);
     }
 
@@ -73,25 +78,25 @@ fn main() -> noargs::Result<()> {
 }
 
 fn lint_file(
-    path: &std::path::Path,
+    path: &Path,
     target_lint_names: &[String],
     known_errors: &mut std::collections::HashSet<&'static str>,
 ) -> usize {
     let text = match std::fs::read_to_string(path) {
         Ok(text) => text,
         Err(e) => {
-            eprintln!("{}: {e}", path.display());
+            eprintln!("error: cannot read {}: {e}", path.display());
             return 1;
         }
     };
+    let color = Color::detect();
+    let source = Source::new(path, &text);
 
     let ctx = match elint::Context::analyze(path, text.clone()) {
         Ok(ctx) => ctx,
         Err(e) => {
-            let (line, column, context_lines) = get_error_context(e.position.offset(), &text);
-            eprintln!("Tokenize error: {e}");
-            eprintln!("  --> {}:{}:{}", path.display(), line, column);
-            eprintln!("{context_lines}");
+            let span = Span::new(e.position.offset(), e.position.offset());
+            report(&color, &source, None, &e.to_string(), span);
             return 1;
         }
     };
@@ -101,20 +106,14 @@ fn lint_file(
     let mut expect = match elint::expect::ExpectRules::new(&ctx, target_lint_names) {
         Ok(expect) => expect,
         Err(e) => {
-            let (line, column, context_lines) = get_error_context(e.span.start, &ctx.text);
-            eprintln!("{e:?}");
-            eprintln!("  --> {}:{}:{}", path.display(), line, column);
-            eprintln!("{context_lines}");
+            report(&color, &source, None, &e.to_string(), e.span);
             return error_count + 1;
         }
     };
 
     for branch in &ctx.branches {
         for diagnostic in &branch.preprocess_diagnostics {
-            let (line, column, context_lines) = get_error_context(diagnostic.span.start, &ctx.text);
-            eprintln!("Preprocess: {}", diagnostic.message);
-            eprintln!("  --> {}:{}:{}", path.display(), line, column);
-            eprintln!("{context_lines}");
+            report(&color, &source, None, &diagnostic.message, diagnostic.span);
             error_count += 1;
         }
 
@@ -122,11 +121,14 @@ fn lint_file(
             for diagnostic in branch.tree.diagnostics() {
                 let span = branch
                     .span_of_range(diagnostic.range())
-                    .unwrap_or(elint::Span::ZERO);
-                let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
-                eprintln!("Parse: {diagnostic:?}");
-                eprintln!("  --> {}:{}:{}", path.display(), line, column);
-                eprintln!("{context_lines}");
+                    .unwrap_or(Span::ZERO);
+                report(
+                    &color,
+                    &source,
+                    None,
+                    &parse_diagnostic_message(*diagnostic),
+                    span,
+                );
                 error_count += 1;
             }
             continue;
@@ -137,10 +139,7 @@ fn lint_file(
                 continue;
             }
 
-            let (line, column, context_lines) = get_error_context(span.start, &ctx.text);
-            eprintln!("Lint Error: RULE={}", rule.name);
-            eprintln!("  --> {}:{}:{}", path.display(), line, column);
-            eprintln!("{context_lines}");
+            report(&color, &source, Some(rule.name), rule.summary(), span);
             if !known_errors.contains(rule.name) {
                 eprintln!(
                     "To suppress this error, add `-elint_expect({}, {{function, Name, Arity}}, \"reason\").`",
@@ -155,15 +154,13 @@ fn lint_file(
     }
 
     for rule in expect.unmatched_expectations() {
-        let (line, column, context_lines) = get_error_context(rule.span.start, &ctx.text);
-        eprintln!(
+        let message = format!(
             "Lint Expectation Not Met: {} ({}): {}",
             rule.name,
             rule.target.describe(),
             rule.reason
         );
-        eprintln!("  --> {}:{}:{}", path.display(), line, column);
-        eprintln!("{context_lines}");
+        report(&color, &source, None, &message, rule.span);
         error_count += 1;
     }
 
@@ -197,50 +194,29 @@ fn check(
     errors
 }
 
-fn get_error_context(byte_offset: usize, text: &str) -> (usize, usize, String) {
-    let mut line = 1usize;
-    let mut column = 1usize;
-
-    for (i, ch) in text.char_indices() {
-        if i >= byte_offset {
-            break;
-        }
-        if ch == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
+/// Human-readable message for one parse diagnostic.
+fn parse_diagnostic_message(diagnostic: erl_parse::Diagnostic) -> String {
+    let kind = match diagnostic.kind() {
+        erl_parse::DiagnosticKind::UnexpectedToken => "unexpected token",
+        erl_parse::DiagnosticKind::UnexpectedEof => "unexpected end of file",
+        erl_parse::DiagnosticKind::SkippedToken => "skipped token",
+        erl_parse::DiagnosticKind::MissingToken => "missing token",
+        erl_parse::DiagnosticKind::NestingDepthExceeded => "nesting depth exceeded",
+    };
+    match diagnostic.expected() {
+        erl_parse::Expected::Category(c) => format!("{kind}; expected {c}"),
+        erl_parse::Expected::TokenKind(k) => format!("{kind}; expected {k:?}"),
+        erl_parse::Expected::Unspecified => kind.to_string(),
     }
+}
 
-    let mut context_lines = String::new();
-    let lines: Vec<&str> = text.lines().collect();
-    if lines.is_empty() {
-        return (line, column, context_lines);
-    }
-    let current_line_idx = (line - 1).min(lines.len().saturating_sub(1));
-
-    let start_idx = current_line_idx.saturating_sub(2);
-    let end_idx = (current_line_idx + 3).min(lines.len());
-
-    let max_line_num = end_idx;
-    let line_num_width = max_line_num.to_string().len();
-
-    for (i, line_text) in lines.iter().enumerate().take(end_idx).skip(start_idx) {
-        let line_num = i + 1;
-        let is_error_line = i == current_line_idx;
-
-        context_lines.push_str(&format!(
-            " {:width$} | {line_text}\n",
-            line_num,
-            width = line_num_width
-        ));
-
-        if is_error_line {
-            let padding = " ".repeat(line_num_width + 3 + column);
-            context_lines.push_str(&format!("{padding}^\n"));
-        }
-    }
-
-    (line, column, context_lines)
+fn report(color: &Color, source: &Source<'_>, code: Option<&str>, message: &str, span: Span) {
+    let _ = elint::diagnostic::render(
+        &mut std::io::stderr(),
+        *color,
+        source,
+        code,
+        message,
+        span,
+    );
 }

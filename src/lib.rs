@@ -2,12 +2,12 @@
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 
+mod context;
+pub mod diagnostic;
+mod error;
 pub mod expect;
 pub mod fs;
 pub mod rules;
-
-mod context;
-mod error;
 mod span;
 
 pub use context::{BranchContext, Context, PreprocessDiagnostic};

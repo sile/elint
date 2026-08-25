@@ -25,6 +25,16 @@ impl Rule {
     ) -> Self {
         Self { name, text, check }
     }
+
+    /// One-line summary: the first paragraph of [`Rule::text`] after the
+    /// markdown title.
+    pub fn summary(&self) -> &str {
+        self.text
+            .lines()
+            .skip(1)
+            .find(|line| !line.trim().is_empty())
+            .unwrap_or(self.name)
+    }
 }
 
 /// Registered lint rules.

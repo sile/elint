@@ -62,24 +62,24 @@ impl Error {
     }
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.reason)
+    }
+}
+
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.fmt_detailed(f)
     }
 }
 
-impl From<Error> for noargs::Error {
-    fn from(error: Error) -> Self {
-        noargs::Error::Other {
-            metadata: None,
-            error: format!("{error:?}"),
-        }
-    }
-}
-
 // We intentionally do not provide blanket `From<E: std::error::Error>` or
 // `From<E: std::fmt::Display>` impls. Rewrapping our own `Error` through such
 // a blanket would duplicate reason / location / backtrace in the output.
+// `noargs::Error` provides its own blanket `From<T: Display>`, which is what
+// converts `crate::Error` through `?`; the message is the plain `Display`
+// (the reason) without the debug-only location / backtrace suffix.
 //
 // To convert a new foreign error type into `crate::Error` via `?`, add a
 // dedicated `impl From<NewError> for Error` in this file.
