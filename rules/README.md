@@ -66,3 +66,7 @@ elint --lint <name> rules/<name>/ok.erl
 `ok.erl` must produce no findings and a zero exit.
 
 `elint explain <name>` prints `rules/<name>/rule.md`.
+
+Project-wide documents (the `-elint_expect` notation, diagnostics, the
+preprocessing pipeline) are available with `elint doc <name>`; run `elint doc`
+for the list.

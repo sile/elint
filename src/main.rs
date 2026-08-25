@@ -33,6 +33,25 @@ fn main() -> noargs::Result<()> {
         return Ok(());
     }
 
+    if noargs::cmd("doc")
+        .doc("Print an embedded document, or list the available documents")
+        .take(&mut args)
+        .is_present()
+    {
+        let name: Option<String> = noargs::arg("<DOC_NAME>")
+            .take(&mut args)
+            .present_and_then(|a| Ok::<_, &str>(a.value().to_string()))?;
+        if let Some(help) = args.finish()? {
+            print!("{help}");
+            return Ok(());
+        }
+        match name {
+            Some(name) => print_doc(&name),
+            None => print_doc_list(),
+        }
+        return Ok(());
+    }
+
     let mut target_lint_names: Vec<String> = Vec::new();
     while let Some(a) = noargs::opt("lint")
         .short('l')
@@ -181,6 +200,39 @@ fn explain_rule(name: &str) -> noargs::Result<()> {
     };
     print!("{}", rule.text);
     Ok(())
+}
+
+/// Documents embedded in the binary, keyed by the `elint doc` name.
+const DOCS: &[(&str, &str, &str)] = &[
+    (
+        "expectations",
+        "The `-elint_expect` notation and suppression",
+        include_str!("../docs/expectations.md"),
+    ),
+    (
+        "diagnostics",
+        "How problems are reported and what is ignored",
+        include_str!("../docs/diagnostics.md"),
+    ),
+    (
+        "preprocessing",
+        "The tokenize / preprocess / parse pipeline",
+        include_str!("../docs/preprocessing.md"),
+    ),
+];
+
+fn print_doc(name: &str) {
+    let Some((_, _, text)) = DOCS.iter().find(|(n, _, _)| *n == name) else {
+        eprintln!("unknown document: {name}");
+        std::process::exit(1);
+    };
+    print!("{text}");
+}
+
+fn print_doc_list() {
+    for (name, description, _) in DOCS {
+        println!("{name} - {description}");
+    }
 }
 
 fn check(
