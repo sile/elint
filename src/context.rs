@@ -87,9 +87,7 @@ impl BranchContext {
             if i == 0 {
                 return Some(Span::new(0, 0));
             }
-            return self
-                .span_of_token(i - 1)
-                .map(|s| Span::new(s.end, s.end));
+            return self.span_of_token(i - 1).map(|s| Span::new(s.end, s.end));
         }
 
         let mut start = None;
@@ -346,7 +344,8 @@ mod tests {
 
     #[test]
     fn explores_every_arm_and_keeps_mainline_first() {
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -ifdef(A).
 foo() -> then_arm.
@@ -354,15 +353,12 @@ foo() -> then_arm.
 foo() -> else_arm.
 -endif.
 bar() -> ok.
-");
+",
+        );
         // Then arm and Else arm.
         assert_eq!(ctx.branches.len(), 2);
         let mainline = &ctx.branches[0];
-        let mainline_text: String = mainline
-            .tokens
-            .iter()
-            .map(|t| t.text(&ctx.text))
-            .collect();
+        let mainline_text: String = mainline.tokens.iter().map(|t| t.text(&ctx.text)).collect();
         assert!(mainline_text.contains("then_arm"));
         assert!(mainline_text.contains("bar()"));
         let side_text: String = ctx.branches[1]
@@ -390,7 +386,8 @@ bar() -> ok.
     fn side_branch_stops_at_its_own_endif() {
         // The Else arm's `case` must be linted, but code after the outer
         // `-endif` must not appear in the side branch (mainline only).
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -ifdef(A).
 ok.
@@ -398,7 +395,8 @@ ok.
 foo() -> ok.
 -endif.
 bar() -> ok.
-");
+",
+        );
         let side = &ctx.branches[1];
         let side_text: String = side.tokens.iter().map(|t| t.text(&ctx.text)).collect();
         assert!(side_text.contains("foo()"));
@@ -410,7 +408,8 @@ bar() -> ok.
         // With the stop-at-`-endif` rule the number of branches stays
         // linear: 2 independent ifdefs yield 3 forks (mainline plus one
         // side per conditional), not the 4 of a full product.
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -ifdef(A).
 a1.
@@ -422,7 +421,8 @@ b1.
 -else.
 b2.
 -endif.
-");
+",
+        );
         assert_eq!(ctx.branches.len(), 3);
     }
 
@@ -430,7 +430,8 @@ b2.
     fn nested_conditionals_explore_inner_arms() {
         // Each arm's nested conditional is explored by the fork that made
         // that arm active, so every marker appears in exactly one branch.
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -ifdef(A).
     -ifdef(B).
@@ -445,14 +446,11 @@ b2.
     n4.
     -endif.
 -endif.
-");
+",
+        );
         assert_eq!(ctx.branches.len(), 4);
-        let marker = |branch: &BranchContext, m: &str| {
-            branch
-                .tokens
-                .iter()
-                .any(|t| t.text(&ctx.text) == m)
-        };
+        let marker =
+            |branch: &BranchContext, m: &str| branch.tokens.iter().any(|t| t.text(&ctx.text) == m);
         assert!(marker(&ctx.branches[0], "n1"));
         let mut seen = std::collections::HashSet::new();
         for branch in &ctx.branches {
@@ -460,7 +458,11 @@ b2.
                 .into_iter()
                 .filter(|m| marker(branch, m))
                 .collect();
-            assert_eq!(present.len(), 1, "branch must contain exactly one marker: {present:?}");
+            assert_eq!(
+                present.len(),
+                1,
+                "branch must contain exactly one marker: {present:?}"
+            );
             seen.insert(present[0]);
         }
         assert_eq!(seen.len(), 4);
@@ -468,10 +470,12 @@ b2.
 
     #[test]
     fn if_elif_chain_explores_every_arm() {
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -if(true). c1. -elif(false). c2. -elif(true). c3. -else. c4. -endif.
-");
+",
+        );
         assert_eq!(ctx.branches.len(), 4);
         let mut seen = std::collections::HashSet::new();
         for branch in &ctx.branches {
@@ -479,7 +483,11 @@ b2.
                 .into_iter()
                 .filter(|m| branch.tokens.iter().any(|t| t.text(&ctx.text) == *m))
                 .collect();
-            assert_eq!(present.len(), 1, "branch must contain exactly one marker: {present:?}");
+            assert_eq!(
+                present.len(),
+                1,
+                "branch must contain exactly one marker: {present:?}"
+            );
             seen.insert(present[0]);
         }
         assert_eq!(seen.len(), 4);
@@ -487,14 +495,16 @@ b2.
 
     #[test]
     fn findings_in_a_side_branch_are_reachable() {
-        let ctx = analyze_ok("\
+        let ctx = analyze_ok(
+            "\
 -module(foo).
 -ifdef(A).
 ok.
 -else.
 foo(T) -> element(1, T).
 -endif.
-");
+",
+        );
         let branch = &ctx.branches[1];
         let findings = (crate::rules::RULES[0].check)(&ctx, branch);
         assert_eq!(findings.len(), 1);

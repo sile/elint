@@ -46,7 +46,9 @@ impl ExpectRules {
                 return Err(Error::new(attr_span, "missing -elint_expect payload"));
             };
             let payload_text = &ctx.text[payload_span.start..payload_span.end];
-            let Some(inner) = payload_text.strip_prefix('(').and_then(|t| t.strip_suffix(')'))
+            let Some(inner) = payload_text
+                .strip_prefix('(')
+                .and_then(|t| t.strip_suffix(')'))
             else {
                 return Err(Error::new(
                     attr_span,
@@ -73,7 +75,10 @@ impl ExpectRules {
                 continue;
             }
             let Some(rule) = crate::rules::RULES.iter().find(|v| v.name == parsed.rule) else {
-                return Err(Error::new(attr_span, format!("unknown rule: {}", parsed.rule)));
+                return Err(Error::new(
+                    attr_span,
+                    format!("unknown rule: {}", parsed.rule),
+                ));
             };
             let scope_spans = match &parsed.target {
                 ExpectTarget::Function(name, arity) => {
@@ -196,7 +201,9 @@ fn clause_name(branch: &BranchContext, node: NodeView<'_>) -> Option<String> {
 
 /// Counts the arguments of a function clause's `ArgumentList`.
 fn clause_arity(node: NodeView<'_>) -> Option<u64> {
-    let args = node.children().find(|c| c.kind() == SyntaxKind::ArgumentList)?;
+    let args = node
+        .children()
+        .find(|c| c.kind() == SyntaxKind::ArgumentList)?;
     Some(args.children().count() as u64)
 }
 
@@ -545,7 +552,11 @@ foo() ->
     ok.
 ";
         let err = ExpectRules::new(&analyze(src), &[]).expect_err("expect must fail");
-        assert!(err.reason.contains("invalid -elint_expect payload"), "{:?}", err.reason);
+        assert!(
+            err.reason.contains("invalid -elint_expect payload"),
+            "{:?}",
+            err.reason
+        );
     }
 
     #[test]

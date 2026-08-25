@@ -151,7 +151,12 @@ pub fn render(
     let gutter = format!("{} | ", " ".repeat(width));
 
     let header = match code {
-        Some(code) => format!("{}[{}]: {}", color.error("error"), color.code(code), message),
+        Some(code) => format!(
+            "{}[{}]: {}",
+            color.error("error"),
+            color.code(code),
+            message
+        ),
         None => format!("{}: {}", color.error("error"), message),
     };
     let location = format!("{}:{}:{}", source.path.display(), line, column);
@@ -217,7 +222,13 @@ mod tests {
     fn renders_single_line_span() {
         let text = "-module(t).\nfoo() -> ok.\n";
         let start = text.find("ok.").expect("finding");
-        let out = render_to_string(text, Span::new(start, start + 2), Some("newline_after_arrow"), "summary", None);
+        let out = render_to_string(
+            text,
+            Span::new(start, start + 2),
+            Some("newline_after_arrow"),
+            "summary",
+            None,
+        );
         assert_eq!(
             out,
             "\

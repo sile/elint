@@ -2,8 +2,8 @@
 
 use std::path::Path;
 
-use elint::diagnostic::{Color, Source};
 use elint::Span;
+use elint::diagnostic::{Color, Source};
 
 fn main() -> noargs::Result<()> {
     let mut args = noargs::raw_args();
@@ -138,7 +138,14 @@ fn lint_file(
 
     for branch in &ctx.branches {
         for diagnostic in &branch.preprocess_diagnostics {
-            report(&color, &source, None, &diagnostic.message, diagnostic.span, None);
+            report(
+                &color,
+                &source,
+                None,
+                &diagnostic.message,
+                diagnostic.span,
+                None,
+            );
             error_count += 1;
         }
 
