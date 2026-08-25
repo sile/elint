@@ -1,5 +1,6 @@
 //! Lint rules.
 
+mod case_over_if;
 mod deep_case_nesting;
 mod element_bif;
 mod newline_after_arrow;
@@ -41,6 +42,7 @@ impl Rule {
 
 /// Registered lint rules.
 pub const RULES: &[Rule] = &[
+    case_over_if::RULE,
     deep_case_nesting::RULE,
     element_bif::RULE,
     newline_after_arrow::RULE,
