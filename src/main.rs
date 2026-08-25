@@ -96,7 +96,7 @@ fn lint_file(
         Ok(ctx) => ctx,
         Err(e) => {
             let span = Span::new(e.position.offset(), e.position.offset());
-            report(&color, &source, None, &e.to_string(), span);
+            report(&color, &source, None, &e.to_string(), span, None);
             return 1;
         }
     };
@@ -106,14 +106,14 @@ fn lint_file(
     let mut expect = match elint::expect::ExpectRules::new(&ctx, target_lint_names) {
         Ok(expect) => expect,
         Err(e) => {
-            report(&color, &source, None, &e.to_string(), e.span);
+            report(&color, &source, None, &e.to_string(), e.span, None);
             return error_count + 1;
         }
     };
 
     for branch in &ctx.branches {
         for diagnostic in &branch.preprocess_diagnostics {
-            report(&color, &source, None, &diagnostic.message, diagnostic.span);
+            report(&color, &source, None, &diagnostic.message, diagnostic.span, None);
             error_count += 1;
         }
 
@@ -128,6 +128,7 @@ fn lint_file(
                     None,
                     &parse_diagnostic_message(*diagnostic),
                     span,
+                    None,
                 );
                 error_count += 1;
             }
@@ -139,14 +140,20 @@ fn lint_file(
                 continue;
             }
 
-            report(&color, &source, Some(rule.name), rule.summary(), span);
-            if !known_errors.contains(rule.name) {
-                eprintln!(
-                    "To suppress this error, add `-elint_expect({}, {{function, Name, Arity}}, \"reason\").`",
-                    rule.name
-                );
-                eprintln!("For details, run `elint explain {}`", rule.name);
-            }
+            let note = (!known_errors.contains(rule.name)).then(|| {
+                format!(
+                    "run `elint explain {}` for details; suppress with `-elint_expect({}, ...)`",
+                    rule.name, rule.name
+                )
+            });
+            report(
+                &color,
+                &source,
+                Some(rule.name),
+                rule.summary(),
+                span,
+                note.as_deref(),
+            );
 
             error_count += 1;
             known_errors.insert(rule.name);
@@ -160,7 +167,7 @@ fn lint_file(
             rule.target.describe(),
             rule.reason
         );
-        report(&color, &source, None, &message, rule.span);
+        report(&color, &source, None, &message, rule.span, None);
         error_count += 1;
     }
 
@@ -210,7 +217,14 @@ fn parse_diagnostic_message(diagnostic: erl_parse::Diagnostic) -> String {
     }
 }
 
-fn report(color: &Color, source: &Source<'_>, code: Option<&str>, message: &str, span: Span) {
+fn report(
+    color: &Color,
+    source: &Source<'_>,
+    code: Option<&str>,
+    message: &str,
+    span: Span,
+    note: Option<&str>,
+) {
     let _ = elint::diagnostic::render(
         &mut std::io::stderr(),
         *color,
@@ -218,5 +232,6 @@ fn report(color: &Color, source: &Source<'_>, code: Option<&str>, message: &str,
         code,
         message,
         span,
+        note,
     );
 }

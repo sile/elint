@@ -105,6 +105,11 @@ impl Color {
         self.paint("34", s)
     }
 
+    /// Blue `note:` label.
+    pub fn note(self, s: &str) -> String {
+        self.paint("34", s)
+    }
+
     /// Bold cyan line number.
     pub fn line_number(self, s: &str) -> String {
         self.paint("1;36", s)
@@ -125,6 +130,7 @@ impl Color {
 /// 10 |     element(1, T)
 ///    |     ^^^^^^^^^^^^
 ///    |
+/// note: a follow-up line when provided
 /// ```
 ///
 /// The caret spans `span` within the first line it touches. Tabs are
@@ -137,6 +143,7 @@ pub fn render(
     code: Option<&str>,
     message: &str,
     span: Span,
+    note: Option<&str>,
 ) -> std::io::Result<()> {
     let (line, column) = source.index.line_col(source.text, span.start);
     let width = line.to_string().len();
@@ -169,6 +176,10 @@ pub fn render(
     writeln!(w, "{gutter}{}{caret}", " ".repeat(visual))?;
     writeln!(w, "{bar}")?;
 
+    if let Some(note) = note {
+        writeln!(w, "{} {note}", color.note("note:"))?;
+    }
+
     Ok(())
 }
 
@@ -180,7 +191,13 @@ fn expand_tabs(s: &str) -> String {
 mod tests {
     use super::*;
 
-    fn render_to_string(text: &str, span: Span, code: Option<&str>, message: &str) -> String {
+    fn render_to_string(
+        text: &str,
+        span: Span,
+        code: Option<&str>,
+        message: &str,
+        note: Option<&str>,
+    ) -> String {
         let source = Source::new(Path::new("t.erl"), text);
         let mut out = Vec::new();
         render(
@@ -190,6 +207,7 @@ mod tests {
             code,
             message,
             span,
+            note,
         )
         .expect("write to Vec");
         String::from_utf8(out).expect("utf8")
@@ -199,7 +217,7 @@ mod tests {
     fn renders_single_line_span() {
         let text = "-module(t).\nfoo() -> ok.\n";
         let start = text.find("ok.").expect("finding");
-        let out = render_to_string(text, Span::new(start, start + 2), Some("newline_after_arrow"), "summary");
+        let out = render_to_string(text, Span::new(start, start + 2), Some("newline_after_arrow"), "summary", None);
         assert_eq!(
             out,
             "\
@@ -217,7 +235,7 @@ error[newline_after_arrow]: summary
     fn pads_line_numbers_to_width() {
         let text = "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nfoo() -> ok.\n";
         let start = text.find("ok.").expect("finding");
-        let out = render_to_string(text, Span::new(start, start + 2), None, "message");
+        let out = render_to_string(text, Span::new(start, start + 2), None, "message", None);
         assert_eq!(
             out,
             "\
@@ -235,7 +253,7 @@ error: message
     fn expands_tabs_in_caret_alignment() {
         let text = "foo() ->\n\tok.\n";
         let start = text.find("ok.").expect("finding");
-        let out = render_to_string(text, Span::new(start, start + 2), None, "message");
+        let out = render_to_string(text, Span::new(start, start + 2), None, "message", None);
         // Tab becomes four columns, so the caret sits at column 5.
         assert_eq!(
             out,
@@ -253,8 +271,33 @@ error: message
     #[test]
     fn clamps_empty_span_to_one_caret() {
         let text = "-module(t).\n";
-        let out = render_to_string(text, Span::new(0, 0), None, "message");
+        let out = render_to_string(text, Span::new(0, 0), None, "message", None);
         assert!(out.contains("^\n"), "{out:?}");
+    }
+
+    #[test]
+    fn renders_note_after_block() {
+        let text = "foo() -> ok.\n";
+        let start = text.find("ok.").expect("finding");
+        let out = render_to_string(
+            text,
+            Span::new(start, start + 1),
+            Some("r"),
+            "m",
+            Some("see `elint explain r`"),
+        );
+        assert_eq!(
+            out,
+            "\
+error[r]: m
+ --> t.erl:1:10
+  |
+1 | foo() -> ok.
+  |          ^
+  |
+note: see `elint explain r`
+"
+        );
     }
 
     #[test]
@@ -270,10 +313,12 @@ error: message
             Some("r"),
             "m",
             Span::new(start, start + 1),
+            Some("note"),
         )
         .expect("write");
         let out = String::from_utf8(out).expect("utf8");
         assert!(out.contains("\x1b[1;31merror\x1b[0m"), "{out:?}");
         assert!(out.contains("\x1b[36mr\x1b[0m"), "{out:?}");
+        assert!(out.contains("\x1b[34mnote:\x1b[0m"), "{out:?}");
     }
 }
