@@ -10,6 +10,7 @@ dependencies = [
  "erl_pp",
  "erl_tokenize",
  "noargs",
+ "unicode-width",
 ]
 
 [[package]]
@@ -41,3 +42,9 @@ name = "noargs"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af5b13e43c3b5f1b4f2db60f5f03c803a04f5dd0a6fd44c83b5517ca1ec42ac4"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"

@@ -3,6 +3,8 @@
 use std::io::{IsTerminal, Write};
 use std::path::Path;
 
+use unicode_width::UnicodeWidthChar;
+
 use crate::Span;
 
 /// Maps byte offsets in a source text to line / column positions.
@@ -24,7 +26,7 @@ impl LineIndex {
         Self { starts }
     }
 
-    /// Returns the 1-based line number and 1-based character column of
+    /// Returns the 1-based line number and 1-based display column of
     /// `offset`.
     pub fn line_col(&self, text: &str, offset: usize) -> (usize, usize) {
         let offset = offset.min(text.len());
@@ -33,7 +35,7 @@ impl LineIndex {
             .partition_point(|&start| start <= offset)
             .saturating_sub(1);
         let line = idx + 1;
-        let column = text[self.starts[idx]..offset].chars().count() + 1;
+        let column = display_width(&text[self.starts[idx]..offset]) + 1;
         (line, column)
     }
 
@@ -169,14 +171,9 @@ pub fn render(
     let line_number = color.line_number(&format!("{line:>width$}"));
     writeln!(w, "{line_number} | {}", expand_tabs(line_text))?;
 
-    let caret_start = source.text[line_start..span.start].chars().count();
     let span_end = span.end.min(line_end);
-    let caret_len = source.text[span.start..span_end].chars().count().max(1);
-    let visual = line_text
-        .chars()
-        .take(caret_start)
-        .map(|c| if c == '\t' { 4 } else { 1 })
-        .sum::<usize>();
+    let visual = display_width(&source.text[line_start..span.start]);
+    let caret_len = display_width(&source.text[span.start..span_end]).max(1);
     let caret = color.caret(&"^".repeat(caret_len));
     writeln!(w, "{gutter}{}{caret}", " ".repeat(visual))?;
     writeln!(w, "{bar}")?;
@@ -186,6 +183,18 @@ pub fn render(
     }
 
     Ok(())
+}
+
+fn display_width(text: &str) -> usize {
+    text.chars()
+        .map(|c| {
+            if c == '\t' {
+                4
+            } else {
+                UnicodeWidthChar::width(c).unwrap_or(0)
+            }
+        })
+        .sum()
 }
 
 fn expand_tabs(s: &str) -> String {
@@ -270,10 +279,70 @@ error: message
             out,
             "\
 error: message
- --> t.erl:2:2
+ --> t.erl:2:5
   |
 2 |     ok.
   |     ^^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn aligns_caret_after_wide_characters() {
+        let text = "foo(\"おはよう\", X)\n";
+        let start = text.find('X').expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 1), None, "message", None);
+        // `おはよう` is four wide characters (8 columns), so the caret is
+        // at display column 17.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:1:17
+  |
+1 | foo(\"おはよう\", X)
+  |                 ^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn aligns_caret_after_combining_characters() {
+        let text = "caf\u{301} X\n";
+        let start = text.find('X').expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 1), None, "message", None);
+        // The combining acute accent has display width 0, so the caret is
+        // at display column 5.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:1:5
+  |
+1 | caf\u{301} X
+  |     ^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn aligns_caret_with_tab_and_wide_characters() {
+        let text = "\tおX\n";
+        let start = text.find('X').expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 1), None, "message", None);
+        // Tab expands to four columns and `お` is two columns wide, so the
+        // caret is at display column 7.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:1:7
+  |
+1 |     おX
+  |       ^
   |
 "
         );
