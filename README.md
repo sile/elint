@@ -4,6 +4,8 @@ Erlang code linter.
 
 **WIP**
 
+Lint rules assume Erlang/OTP 29.0 or later.
+
 ## Documentation
 
 - [Preprocessing](docs/preprocessing.md): how elint preprocesses Erlang

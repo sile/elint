@@ -3,6 +3,9 @@
 Each lint lives under `rules/<name>/` and `src/rules/<name>.rs`.
 `<name>` is a `lower_snake_case` atom. Do not use hyphens.
 
+Lint rules assume Erlang/OTP 29.0 or later. A rule may rely on syntax
+introduced in OTP 29.0 without documenting a version restriction.
+
 ## Layout
 
 | Path | Role |
