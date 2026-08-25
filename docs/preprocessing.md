@@ -74,7 +74,9 @@ include resolution should be reconsidered at that point.
 ## Reporting
 
 - Tokenize errors abort the file: no branch is linted.
-- Preprocessor diagnostics (`-error` / `-warning`, input errors) and parse
-  diagnostics are reported per branch.
+- Preprocessor structural errors (stray `-else`, unclosed conditional, macro
+  arity mismatch, ...) and parse diagnostics are reported per branch.
+- `-error` / `-warning` directives are deliberately ignored; see
+  [diagnostics](diagnostics.md).
 - Parse diagnostics cause only that branch's lint to be skipped; other
   branches still contribute findings.
