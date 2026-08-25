@@ -506,7 +506,11 @@ foo(T) -> element(1, T).
 ",
         );
         let branch = &ctx.branches[1];
-        let findings = (crate::rules::RULES[0].check)(&ctx, branch);
+        let rule = crate::rules::RULES
+            .iter()
+            .find(|rule| rule.name == "element_bif")
+            .expect("element_bif rule");
+        let findings = (rule.check)(&ctx, branch);
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].text(&ctx.text), "element(1, T)");
     }

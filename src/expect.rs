@@ -342,9 +342,13 @@ mod tests {
     }
 
     fn element_bif_findings(ctx: &Context) -> Vec<Span> {
+        let rule = crate::rules::RULES
+            .iter()
+            .find(|rule| rule.name == "element_bif")
+            .expect("element_bif rule");
         let mut out = Vec::new();
         for branch in &ctx.branches {
-            out.extend((crate::rules::RULES[0].check)(ctx, branch));
+            out.extend((rule.check)(ctx, branch));
         }
         out
     }

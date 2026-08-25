@@ -1,5 +1,6 @@
 //! Lint rules.
 
+mod deep_case_nesting;
 mod element_bif;
 mod newline_after_arrow;
 mod strict_generator;
@@ -40,6 +41,7 @@ impl Rule {
 
 /// Registered lint rules.
 pub const RULES: &[Rule] = &[
+    deep_case_nesting::RULE,
     element_bif::RULE,
     newline_after_arrow::RULE,
     strict_generator::RULE,
