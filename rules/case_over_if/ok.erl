@@ -2,6 +2,7 @@
 
 -export([case_only/1, simple/0]).
 
+
 case_only(N) ->
     case N > 0 of
         true ->
@@ -9,6 +10,7 @@ case_only(N) ->
         false ->
             non_positive
     end.
+
 
 simple() ->
     ok.

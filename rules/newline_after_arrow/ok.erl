@@ -1,23 +1,23 @@
 -module(ok).
 
--export([
-    function_clause/0,
-    case_clause/0,
-    if_clause/0,
-    receive_after/0,
-    try_clauses/0,
-    maybe_else/0,
-    anon_fun/0,
-    map_and_maybe_match/0,
-    comment_then_newline/0,
-    one_line_anon_fun/0,
-    one_line_named_fun/0
-]).
+-export([function_clause/0,
+         case_clause/0,
+         if_clause/0,
+         receive_after/0,
+         try_clauses/0,
+         maybe_else/0,
+         anon_fun/0,
+         map_and_maybe_match/0,
+         comment_then_newline/0,
+         one_line_anon_fun/0,
+         one_line_named_fun/0]).
+
 
 -spec function_clause() -> ok.
 
 function_clause() ->
     ok.
+
 
 case_clause() ->
     case 1 of
@@ -25,11 +25,13 @@ case_clause() ->
             ok
     end.
 
+
 if_clause() ->
     if
         true ->
             ok
     end.
+
 
 receive_after() ->
     receive
@@ -37,6 +39,7 @@ receive_after() ->
         0 ->
             ok
     end.
+
 
 try_clauses() ->
     try 1 of
@@ -47,6 +50,7 @@ try_clauses() ->
             ok
     end.
 
+
 maybe_else() ->
     maybe
         ok
@@ -55,16 +59,20 @@ maybe_else() ->
             ok
     end.
 
+
 anon_fun() ->
     fun() ->
-        ok
+            ok
     end.
+
 
 one_line_anon_fun() ->
     fun() -> ok end.
 
+
 one_line_named_fun() ->
     fun F() -> ok end.
+
 
 map_and_maybe_match() ->
     _ = #{a => b},
@@ -76,9 +84,12 @@ map_and_maybe_match() ->
             error
     end.
 
-comment_then_newline() -> % note
+
+comment_then_newline() ->  % note
     ok.
 
+
 -define(MACRO_CLAUSE, macro_clause() -> ok).
+
 
 ?MACRO_CLAUSE.

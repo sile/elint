@@ -2,6 +2,7 @@
 
 -export([deep/3, deeper/5]).
 
+
 deep(A, B, C) ->
     case A of
         a1 ->
@@ -13,6 +14,7 @@ deep(A, B, C) ->
                     end
             end
     end.
+
 
 deeper(A, B, C, D, E) ->
     case A of

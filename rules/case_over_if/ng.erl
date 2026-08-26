@@ -2,6 +2,7 @@
 
 -export([basic/1, with_true/0, nested/1]).
 
+
 basic(N) ->
     if
         N > 0 ->
@@ -10,11 +11,13 @@ basic(N) ->
             non_positive
     end.
 
+
 with_true() ->
     if
         true ->
             ok
     end.
+
 
 nested(N) ->
     case N of
