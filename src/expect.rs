@@ -2,8 +2,6 @@
 
 use std::collections::HashMap;
 
-use erl_parse::{NodeView, SyntaxKind};
-
 use crate::context::{clause_arity, clause_name};
 use crate::{BranchContext, Context, Error, Span};
 
@@ -27,7 +25,7 @@ impl ExpectRules {
         let mut rules = Vec::new();
 
         for attribute in branch.tree.roots() {
-            if attribute.kind() != SyntaxKind::Attribute {
+            if attribute.kind() != erl_parse::SyntaxKind::Attribute {
                 continue;
             }
             let Some(attr_span) = branch.span_of_range(attribute.token_range()) else {
@@ -37,7 +35,8 @@ impl ExpectRules {
             let Some(name) = children.next() else {
                 continue;
             };
-            if name.kind() != SyntaxKind::AttributeName || !is_elint_expect(branch, name) {
+            if name.kind() != erl_parse::SyntaxKind::AttributeName || !is_elint_expect(branch, name)
+            {
                 continue;
             }
             let Some(payload) = children.next() else {
@@ -169,7 +168,7 @@ type FunctionIndex = HashMap<(String, u64), Vec<Span>>;
 fn function_index(branch: &BranchContext) -> FunctionIndex {
     let mut index = FunctionIndex::new();
     for node in branch.tree.nodes() {
-        if node.kind() != SyntaxKind::FunctionClause {
+        if node.kind() != erl_parse::SyntaxKind::FunctionClause {
             continue;
         }
         let Some(name) = clause_name(branch, node) else {
@@ -187,7 +186,7 @@ fn function_index(branch: &BranchContext) -> FunctionIndex {
 }
 
 /// Returns whether the attribute name node spells `elint_expect`.
-fn is_elint_expect(branch: &BranchContext, name: NodeView<'_>) -> bool {
+fn is_elint_expect(branch: &BranchContext, name: erl_parse::NodeView<'_>) -> bool {
     name.indexed_tokens().any(|(i, _)| {
         branch.source_tokens.get(i.get()).is_some_and(|token| {
             matches!(token.value(), erl_tokenize::TokenValue::Atom(a) if a == "elint_expect")
@@ -227,7 +226,7 @@ fn parse_expect_payload(source: &str) -> Result<ParsedExpect, PayloadError> {
         return Err(PayloadError::Invalid);
     }
     let roots: Vec<_> = tree.roots().collect();
-    if roots.len() != 1 || roots[0].kind() != SyntaxKind::TupleExpr {
+    if roots.len() != 1 || roots[0].kind() != erl_parse::SyntaxKind::TupleExpr {
         return Err(PayloadError::Invalid);
     }
     let mut elements = roots[0].children();
@@ -254,8 +253,8 @@ fn parse_expect_payload(source: &str) -> Result<ParsedExpect, PayloadError> {
 }
 
 /// Reads the target: `{function, Name, Arity}` or `module`.
-fn read_target(node: NodeView<'_>, source: &str) -> Option<ExpectTarget> {
-    if node.kind() == SyntaxKind::TupleExpr {
+fn read_target(node: erl_parse::NodeView<'_>, source: &str) -> Option<ExpectTarget> {
+    if node.kind() == erl_parse::SyntaxKind::TupleExpr {
         let mut elements = node.children();
         let tag = read_term_atom(elements.next()?, source)?;
         if tag != "function" {
@@ -267,7 +266,7 @@ fn read_target(node: NodeView<'_>, source: &str) -> Option<ExpectTarget> {
             return None;
         }
         Some(ExpectTarget::Function(name, arity))
-    } else if node.kind() == SyntaxKind::AtomExpr {
+    } else if node.kind() == erl_parse::SyntaxKind::AtomExpr {
         let name = read_term_atom(node, source)?;
         if name == "module" {
             Some(ExpectTarget::Module)
@@ -279,8 +278,8 @@ fn read_target(node: NodeView<'_>, source: &str) -> Option<ExpectTarget> {
     }
 }
 
-fn read_term_atom(node: NodeView<'_>, source: &str) -> Option<String> {
-    if node.kind() != SyntaxKind::AtomExpr {
+fn read_term_atom(node: erl_parse::NodeView<'_>, source: &str) -> Option<String> {
+    if node.kind() != erl_parse::SyntaxKind::AtomExpr {
         return None;
     }
     let token = node.tokens().iter().find(|t| t.kind().is_lexical())?;
@@ -290,8 +289,8 @@ fn read_term_atom(node: NodeView<'_>, source: &str) -> Option<String> {
     }
 }
 
-fn read_term_integer(node: NodeView<'_>, source: &str) -> Option<u64> {
-    if node.kind() != SyntaxKind::IntegerExpr {
+fn read_term_integer(node: erl_parse::NodeView<'_>, source: &str) -> Option<u64> {
+    if node.kind() != erl_parse::SyntaxKind::IntegerExpr {
         return None;
     }
     let token = node.tokens().iter().find(|t| t.kind().is_lexical())?;
@@ -301,8 +300,8 @@ fn read_term_integer(node: NodeView<'_>, source: &str) -> Option<u64> {
     }
 }
 
-fn read_term_string(node: NodeView<'_>, source: &str) -> Option<String> {
-    if node.kind() != SyntaxKind::StringExpr {
+fn read_term_string(node: erl_parse::NodeView<'_>, source: &str) -> Option<String> {
+    if node.kind() != erl_parse::SyntaxKind::StringExpr {
         return None;
     }
     let token = node.tokens().iter().find(|t| t.kind().is_lexical())?;
