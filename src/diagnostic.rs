@@ -235,7 +235,7 @@ pub fn render(
     writeln!(w, "{gutter}{}{caret}", " ".repeat(visual))?;
 
     if end_line != line {
-        writeln!(w, "{}|", ".".repeat(width))?;
+        writeln!(w, "{} |", ".".repeat(width))?;
         if end_line > 1 {
             let (prev_start, prev_end) = source.index.line_range(source.text, end_line - 2);
             let prev_text = &source.text[prev_start..prev_end];
@@ -621,7 +621,7 @@ error: message
   | foo() ->
 2 |     case A of
   |     ^^^^
-.|
+. |
   |             ok
 5 |     end.
   |     ^^^
@@ -647,7 +647,7 @@ error: message
   | foo() ->
 2 |     case A of
   |     ^^^^^^^^^
-.|
+. |
   |             ok
 5 |     end.
   |     ^^^
