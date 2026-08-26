@@ -1,6 +1,6 @@
 //! `case_over_if` lint: prefer case over if.
 
-use super::Rule;
+use super::{Rule, token_span_in_node};
 use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags every `if` expression.
@@ -16,22 +16,16 @@ fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
         if node.kind() != erl_parse::SyntaxKind::IfExpr {
             continue;
         }
-        if let Some(span) = if_keyword_span(branch, node) {
+        if let Some(span) = token_span_in_node(branch, node, |token| {
+            matches!(
+                token.kind(),
+                erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::If)
+            )
+        }) {
             errors.push(span);
         }
     }
     errors
-}
-
-fn if_keyword_span(branch: &BranchContext, node: erl_parse::NodeView<'_>) -> Option<Span> {
-    let index = node.indexed_tokens().find_map(|(i, token)| {
-        matches!(
-            token.kind(),
-            erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::If)
-        )
-        .then_some(i)
-    })?;
-    branch.span_of_range(erl_parse::TokenRange::single(index))
 }
 
 #[cfg(test)]

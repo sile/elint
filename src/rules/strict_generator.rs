@@ -1,6 +1,6 @@
 //! `strict_generator` lint: require strict comprehension generators.
 
-use super::Rule;
+use super::{Rule, token_span_in_node};
 use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags relaxed comprehension generators.
@@ -29,26 +29,19 @@ fn walk(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<
 }
 
 fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
-    let Some(arrow) = relaxed_arrow(node) else {
-        return;
-    };
-    let Some(span) = branch.span_of_range(erl_parse::TokenRange::single(arrow)) else {
-        return;
-    };
-    errors.push(span);
-}
-
-fn relaxed_arrow(node: erl_parse::NodeView<'_>) -> Option<erl_parse::TokenIndex> {
     let expected = match node.kind() {
         erl_parse::SyntaxKind::Generator | erl_parse::SyntaxKind::MapGenerator => {
             erl_tokenize::Symbol::LeftArrow
         }
         erl_parse::SyntaxKind::BitstringGenerator => erl_tokenize::Symbol::DoubleLeftArrow,
-        _ => return None,
+        _ => return,
     };
-    node.indexed_tokens().find_map(|(i, token)| {
-        (token.kind() == erl_tokenize::TokenKind::Symbol(expected)).then_some(i)
-    })
+    let Some(span) = token_span_in_node(branch, node, |token| {
+        token.kind() == erl_tokenize::TokenKind::Symbol(expected)
+    }) else {
+        return;
+    };
+    errors.push(span);
 }
 
 #[cfg(test)]

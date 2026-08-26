@@ -49,6 +49,24 @@ pub const RULES: &[Rule] = &[
     strict_generator::RULE,
 ];
 
+/// Returns the span of the first token inside `node`'s range that satisfies
+/// `predicate`, walking the node's tokens with [`erl_parse::NodeView::indexed_tokens`].
+pub(crate) fn token_span_in_node(
+    branch: &BranchContext,
+    node: erl_parse::NodeView<'_>,
+    predicate: impl Fn(erl_tokenize::Token) -> bool,
+) -> Option<Span> {
+    let index = node
+        .indexed_tokens()
+        .find_map(|(i, token)| predicate(token).then_some(i))?;
+    token_span(branch, index)
+}
+
+/// Returns the span of the single token at `index`.
+pub(crate) fn token_span(branch: &BranchContext, index: erl_parse::TokenIndex) -> Option<Span> {
+    branch.span_of_range(erl_parse::TokenRange::single(index))
+}
+
 #[cfg(test)]
 pub(crate) mod test_support {
     use super::*;

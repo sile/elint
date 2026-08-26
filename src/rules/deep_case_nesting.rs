@@ -1,6 +1,6 @@
 //! `deep_case_nesting` lint: flag case nested three or more levels deep.
 
-use super::Rule;
+use super::{Rule, token_span_in_node};
 use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags deeply nested `case` expressions.
@@ -33,7 +33,12 @@ fn walk(
     let child_depth = match node.kind() {
         erl_parse::SyntaxKind::CaseExpr => {
             if case_depth + 1 >= 3
-                && let Some(span) = case_keyword_span(branch, node)
+                && let Some(span) = token_span_in_node(branch, node, |token| {
+                    matches!(
+                        token.kind(),
+                        erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::Case)
+                    )
+                })
             {
                 errors.push(span);
             }
@@ -65,17 +70,6 @@ fn is_depth_break(kind: erl_parse::SyntaxKind) -> bool {
             | erl_parse::SyntaxKind::MapComprehension
             | erl_parse::SyntaxKind::BinaryComprehension
     )
-}
-
-fn case_keyword_span(branch: &BranchContext, node: erl_parse::NodeView<'_>) -> Option<Span> {
-    let index = node.indexed_tokens().find_map(|(i, token)| {
-        matches!(
-            token.kind(),
-            erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::Case)
-        )
-        .then_some(i)
-    })?;
-    branch.span_of_range(erl_parse::TokenRange::single(index))
 }
 
 #[cfg(test)]

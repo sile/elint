@@ -1,6 +1,6 @@
 //! `newline_after_arrow` lint: require a newline after clause `->`.
 
-use super::Rule;
+use super::{Rule, token_span};
 use crate::{BranchContext, Context, Span};
 
 /// Lint rule that flags a clause `->` with no newline before the body.
@@ -129,10 +129,6 @@ fn is_source_origin(branch: &BranchContext, index: erl_parse::TokenIndex) -> boo
         .source_tokens
         .get(index.get())
         .is_some_and(|token| matches!(token.origin(), erl_pp::Origin::Source))
-}
-
-fn token_span(branch: &BranchContext, index: erl_parse::TokenIndex) -> Option<Span> {
-    branch.span_of_range(erl_parse::TokenRange::single(index))
 }
 
 #[cfg(test)]
