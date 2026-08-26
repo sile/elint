@@ -1,7 +1,7 @@
 //! `element_bif` lint: flag `element/2` and `erlang:element/2` with a literal index.
 
 use super::Rule;
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags `element/2` used as a BIF.
 pub const RULE: Rule = Rule::new(
@@ -10,7 +10,7 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
+fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Finding> {
     let mut errors = Vec::new();
     for node in branch.tree.nodes() {
         check_node(branch, node, &mut errors);
@@ -18,7 +18,7 @@ fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
     errors
 }
 
-fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Finding>) {
     if node.kind() != erl_parse::SyntaxKind::CallExpr {
         return;
     }
@@ -46,7 +46,10 @@ fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mu
     }
 
     if let Some(span) = branch.span_of_range(node.token_range()) {
-        errors.push(span);
+        errors.push(Finding {
+            span,
+            node: node.node_id(),
+        });
     }
 }
 

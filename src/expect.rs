@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use erl_parse::{NodeView, SyntaxKind};
 
+use crate::context::{clause_arity, clause_name};
 use crate::{BranchContext, Context, Error, Span};
 
 /// Parsed `-elint_expect` entries collected from the mainline tree.
@@ -185,28 +186,6 @@ fn function_index(branch: &BranchContext) -> FunctionIndex {
     index
 }
 
-/// Reads the name atom of a function clause: its first lexical token.
-fn clause_name(branch: &BranchContext, node: NodeView<'_>) -> Option<String> {
-    node.indexed_tokens().find_map(|(i, _)| {
-        let token = branch.source_tokens.get(i.get())?;
-        if !token.token().kind().is_lexical() {
-            return None;
-        }
-        match token.value() {
-            erl_tokenize::TokenValue::Atom(name) => Some(name.into_owned()),
-            _ => None,
-        }
-    })
-}
-
-/// Counts the arguments of a function clause's `ArgumentList`.
-fn clause_arity(node: NodeView<'_>) -> Option<u64> {
-    let args = node
-        .children()
-        .find(|c| c.kind() == SyntaxKind::ArgumentList)?;
-    Some(args.children().count() as u64)
-}
-
 /// Returns whether the attribute name node spells `elint_expect`.
 fn is_elint_expect(branch: &BranchContext, name: NodeView<'_>) -> bool {
     name.indexed_tokens().any(|(i, _)| {
@@ -348,7 +327,7 @@ mod tests {
             .expect("element_bif rule");
         let mut out = Vec::new();
         for branch in &ctx.branches {
-            out.extend((rule.check)(ctx, branch));
+            out.extend((rule.check)(ctx, branch).into_iter().map(|f| f.span));
         }
         out
     }

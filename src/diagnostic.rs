@@ -127,7 +127,7 @@ impl Color {
 ///
 /// ```text
 /// error[code]: message
-///   --> path:line:col
+///   --> path:line:col (in foo/2)
 ///    |
 ///    | previous line, shown as context when it exists
 /// 10 |     element(1, T)
@@ -139,8 +139,10 @@ impl Color {
 /// The caret spans `span` within the first line it touches. When the
 /// reported line is not the first line, the immediately preceding line is
 /// shown without a line number as context (an empty preceding line is
-/// omitted). Tabs are expanded to four columns in the source and caret
-/// lines so the caret stays aligned.
+/// omitted). `enclosing`, when present, is the enclosing function name
+/// appended to the location. Tabs are expanded to four columns in the
+/// source and caret lines so the caret stays aligned.
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     w: &mut impl Write,
     color: Color,
@@ -148,6 +150,7 @@ pub fn render(
     code: Option<&str>,
     message: &str,
     span: Span,
+    enclosing: Option<&str>,
     note: Option<&str>,
 ) -> std::io::Result<()> {
     let (line, column) = source.index.line_col(source.text, span.start);
@@ -165,6 +168,10 @@ pub fn render(
         None => format!("{}: {}", color.error("error"), message),
     };
     let location = format!("{}:{}:{}", source.path.display(), line, column);
+    let location = match enclosing {
+        Some(name) => format!("{location} (in {})", color.note(name)),
+        None => location,
+    };
     writeln!(w, "{header}")?;
     writeln!(w, "{}{} {location}", " ".repeat(width), color.arrow("-->"))?;
     writeln!(w, "{bar}")?;
@@ -232,6 +239,7 @@ mod tests {
             code,
             message,
             span,
+            None,
             note,
         )
         .expect("write to Vec");
@@ -453,6 +461,37 @@ note: see `elint explain r`
     }
 
     #[test]
+    fn shows_enclosing_function_name() {
+        let text = "foo() -> ok.\n";
+        let start = text.find("ok.").expect("finding");
+        let source = Source::new(Path::new("t.erl"), text);
+        let mut out = Vec::new();
+        render(
+            &mut out,
+            Color { enabled: false },
+            &source,
+            None,
+            "message",
+            Span::new(start, start + 2),
+            Some("foo/0"),
+            None,
+        )
+        .expect("write to Vec");
+        let out = String::from_utf8(out).expect("utf8");
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:1:10 (in foo/0)
+  |
+1 | foo() -> ok.
+  |          ^^
+  |
+"
+        );
+    }
+
+    #[test]
     fn color_codes_are_emitted_when_enabled() {
         let text = "foo() -> ok.\n";
         let start = text.find("ok.").expect("finding");
@@ -465,6 +504,7 @@ note: see `elint explain r`
             Some("r"),
             "m",
             Span::new(start, start + 1),
+            None,
             Some("note"),
         )
         .expect("write");

@@ -12,7 +12,7 @@ mod span;
 
 pub use context::{BranchContext, Context, PreprocessDiagnostic};
 pub use error::Error;
-pub use span::Span;
+pub use span::{Finding, Span};
 
 /// Result alias that uses [`Error`].
 pub type Result<T = ()> = std::result::Result<T, Error>;

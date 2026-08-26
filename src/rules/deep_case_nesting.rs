@@ -1,7 +1,7 @@
 //! `deep_case_nesting` lint: flag case nested three or more levels deep.
 
 use super::{Rule, token_span_in_node};
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags deeply nested `case` expressions.
 pub const RULE: Rule = Rule::new(
@@ -10,7 +10,7 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
+fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Finding> {
     let mut errors = Vec::new();
     for root in branch.tree.roots() {
         walk(branch, root, 0, &mut errors);
@@ -22,7 +22,7 @@ fn walk(
     branch: &BranchContext,
     node: erl_parse::NodeView<'_>,
     case_depth: usize,
-    errors: &mut Vec<Span>,
+    errors: &mut Vec<Finding>,
 ) {
     if is_depth_break(node.kind()) {
         for child in node.children() {
@@ -40,7 +40,10 @@ fn walk(
                     )
                 })
             {
-                errors.push(span);
+                errors.push(Finding {
+                    span,
+                    node: node.node_id(),
+                });
             }
             case_depth + 1
         }

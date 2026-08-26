@@ -8,7 +8,7 @@ Every report shares one rustc-style block:
 
 ```text
 error[element_bif]: Disallow `element/2` with a literal index; use pattern matching instead.
-  --> path/to/file.erl:3:5
+  --> path/to/file.erl:3:5 (in foo/1)
    |
    | foo(T) ->
  3 |     element(1, T)
@@ -19,6 +19,8 @@ error[element_bif]: Disallow `element/2` with a literal index; use pattern match
 - `error[code]`: the bracketed code is the lint rule name. Other reports
   carry no code (`error: message`).
 - `--> path:line:col`: 1-based line and character column of the report.
+  When a rule finding lies inside a function, the enclosing function name
+  (`in foo/1`) is appended to the location line.
 - A source line with a caret spanning the reported byte range (for a
   multi-line range, only its first line is shown). Tabs are expanded to
   four columns so the caret stays aligned.

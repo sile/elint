@@ -31,3 +31,16 @@ impl Span {
         self.start <= other.start && other.end <= self.end
     }
 }
+
+/// A lint finding: a byte range plus the syntax node it originates from.
+///
+/// The owned [`erl_parse::NodeId`] (no lifetime) lets callers resolve
+/// context around the finding, such as the enclosing function name,
+/// after the rule's `check` has returned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Finding {
+    /// Byte range in the original source file.
+    pub span: Span,
+    /// The syntax node the finding originates from.
+    pub node: erl_parse::NodeId,
+}

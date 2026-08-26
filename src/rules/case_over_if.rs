@@ -1,7 +1,7 @@
 //! `case_over_if` lint: prefer case over if.
 
 use super::{Rule, token_span_in_node};
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags every `if` expression.
 pub const RULE: Rule = Rule::new(
@@ -10,7 +10,7 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
+fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Finding> {
     let mut errors = Vec::new();
     for node in branch.tree.nodes() {
         if node.kind() != erl_parse::SyntaxKind::IfExpr {
@@ -22,7 +22,10 @@ fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
                 erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::If)
             )
         }) {
-            errors.push(span);
+            errors.push(Finding {
+                span,
+                node: node.node_id(),
+            });
         }
     }
     errors

@@ -1,7 +1,7 @@
 //! `newline_after_arrow` lint: require a newline after clause `->`.
 
 use super::{Rule, token_span};
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags a clause `->` with no newline before the body.
 pub const RULE: Rule = Rule::new(
@@ -10,7 +10,7 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(ctx: &Context, branch: &BranchContext) -> Vec<Span> {
+fn check(ctx: &Context, branch: &BranchContext) -> Vec<Finding> {
     let mut errors = Vec::new();
     for root in branch.tree.roots() {
         walk(ctx, branch, root, &mut errors);
@@ -22,7 +22,7 @@ fn walk(
     ctx: &Context,
     branch: &BranchContext,
     node: erl_parse::NodeView<'_>,
-    errors: &mut Vec<Span>,
+    errors: &mut Vec<Finding>,
 ) {
     if is_one_line_fun(ctx, branch, node) {
         return;
@@ -50,7 +50,7 @@ fn check_node(
     ctx: &Context,
     branch: &BranchContext,
     node: erl_parse::NodeView<'_>,
-    errors: &mut Vec<Span>,
+    errors: &mut Vec<Finding>,
 ) {
     if !is_clause_kind(node.kind()) {
         return;
@@ -84,7 +84,10 @@ fn check_node(
     }
     let between = &ctx.text[arrow_span.end..body_span.start];
     if !between.contains('\n') {
-        errors.push(arrow_span);
+        errors.push(Finding {
+            span: arrow_span,
+            node: node.node_id(),
+        });
     }
 }
 
@@ -253,9 +256,9 @@ foo() -> ok.
 ";
         let ctx = Context::analyze("t.erl", src.to_string()).expect("scan");
         let mut expect = crate::expect::ExpectRules::new(&ctx, &[]).expect("expect");
-        let spans = check(&ctx, &ctx.branches[0]);
-        assert_eq!(spans.len(), 1);
-        assert!(expect.handle_error("newline_after_arrow", spans[0]));
+        let findings = check(&ctx, &ctx.branches[0]);
+        assert_eq!(findings.len(), 1);
+        assert!(expect.handle_error("newline_after_arrow", findings[0].span));
         assert!(expect.unmatched_expectations().next().is_none());
     }
 

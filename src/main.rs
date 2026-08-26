@@ -121,7 +121,7 @@ fn lint_file(
         Ok(ctx) => ctx,
         Err(e) => {
             let span = Span::new(e.position.offset(), e.position.offset());
-            report(&color, &source, None, &e.to_string(), span, None);
+            report(&color, &source, None, &e.to_string(), span, None, None);
             return 1;
         }
     };
@@ -131,7 +131,7 @@ fn lint_file(
     let mut expect = match elint::expect::ExpectRules::new(&ctx, target_lint_names) {
         Ok(expect) => expect,
         Err(e) => {
-            report(&color, &source, None, &e.to_string(), e.span, None);
+            report(&color, &source, None, &e.to_string(), e.span, None, None);
             return error_count + 1;
         }
     };
@@ -144,6 +144,7 @@ fn lint_file(
                 None,
                 &diagnostic.message,
                 diagnostic.span,
+                None,
                 None,
             );
             error_count += 1;
@@ -161,14 +162,15 @@ fn lint_file(
                     &parse_diagnostic_message(*diagnostic),
                     span,
                     None,
+                    None,
                 );
                 error_count += 1;
             }
             continue;
         }
 
-        for (rule, span) in check(target_lint_names, &ctx, branch) {
-            if expect.handle_error(rule.name, span) {
+        for (rule, finding) in check(target_lint_names, &ctx, branch) {
+            if expect.handle_error(rule.name, finding.span) {
                 continue;
             }
 
@@ -183,7 +185,8 @@ fn lint_file(
                 &source,
                 Some(rule.name),
                 rule.summary(),
-                span,
+                finding.span,
+                branch.enclosing_function_name(finding.node).as_deref(),
                 note.as_deref(),
             );
 
@@ -199,7 +202,7 @@ fn lint_file(
             rule.target.describe(),
             rule.reason
         );
-        report(&color, &source, None, &message, rule.span, None);
+        report(&color, &source, None, &message, rule.span, None, None);
         error_count += 1;
     }
 
@@ -259,7 +262,7 @@ fn check(
     target_lint_names: &[String],
     ctx: &elint::Context,
     branch: &elint::BranchContext,
-) -> Vec<(&'static elint::rules::Rule, elint::Span)> {
+) -> Vec<(&'static elint::rules::Rule, elint::Finding)> {
     let mut errors = Vec::new();
     for rule in elint::rules::RULES {
         if !target_lint_names.is_empty() && !target_lint_names.iter().any(|n| n == rule.name) {
@@ -295,6 +298,7 @@ fn report(
     code: Option<&str>,
     message: &str,
     span: Span,
+    enclosing: Option<&str>,
     note: Option<&str>,
 ) {
     let _ = elint::diagnostic::render(
@@ -304,6 +308,7 @@ fn report(
         code,
         message,
         span,
+        enclosing,
         note,
     );
 }

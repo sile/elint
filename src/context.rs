@@ -104,6 +104,49 @@ impl BranchContext {
         let token = self.source_tokens.get(index)?;
         span_in_original_file(token.origin(), token.source_span())
     }
+
+    /// Returns the `Name/Arity` of the function enclosing `node`, e.g.
+    /// `foo/2`, when the node lies inside a [`erl_parse::SyntaxKind::FunctionDecl`].
+    ///
+    /// Walks `node`'s ancestors to the nearest `FunctionDecl`, reads the
+    /// name atom and argument-list arity from its first
+    /// [`erl_parse::SyntaxKind::FunctionClause`], and returns `None` when
+    /// there is no enclosing function (top-level or attribute context) or
+    /// the name cannot be resolved.
+    pub fn enclosing_function_name(&self, node: erl_parse::NodeId) -> Option<String> {
+        let view = self.tree.view(node)?;
+        let decl = view
+            .ancestors()
+            .find(|a| a.kind() == erl_parse::SyntaxKind::FunctionDecl)?;
+        let clause = decl
+            .children()
+            .find(|c| c.kind() == erl_parse::SyntaxKind::FunctionClause)?;
+        let name = clause_name(self, clause)?;
+        let arity = clause_arity(clause)?;
+        Some(format!("{name}/{arity}"))
+    }
+}
+
+/// Reads the name atom of a function clause: its first lexical token.
+pub(crate) fn clause_name(branch: &BranchContext, node: erl_parse::NodeView<'_>) -> Option<String> {
+    node.indexed_tokens().find_map(|(i, _)| {
+        let token = branch.source_tokens.get(i.get())?;
+        if !token.token().kind().is_lexical() {
+            return None;
+        }
+        match token.value() {
+            erl_tokenize::TokenValue::Atom(name) => Some(name.into_owned()),
+            _ => None,
+        }
+    })
+}
+
+/// Counts the arguments of a function clause's `ArgumentList`.
+pub(crate) fn clause_arity(node: erl_parse::NodeView<'_>) -> Option<u64> {
+    let args = node
+        .children()
+        .find(|c| c.kind() == erl_parse::SyntaxKind::ArgumentList)?;
+    Some(args.children().count() as u64)
 }
 
 /// One in-progress exploration fork of the preprocessor.
@@ -521,6 +564,48 @@ foo(T) -> element(1, T).
             .expect("element_bif rule");
         let findings = (rule.check)(&ctx, branch);
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].text(&ctx.text), "element(1, T)");
+        assert_eq!(findings[0].span.text(&ctx.text), "element(1, T)");
+    }
+
+    #[test]
+    fn enclosing_function_name_resolves_function() {
+        let ctx = analyze_ok("-module(t).\nfoo(A, B) ->\n    element(1, A).\n");
+        let branch = &ctx.branches[0];
+        let call = branch
+            .tree
+            .nodes()
+            .find(|n| n.kind() == erl_parse::SyntaxKind::CallExpr)
+            .expect("call expr");
+        assert_eq!(
+            branch.enclosing_function_name(call.node_id()).as_deref(),
+            Some("foo/2")
+        );
+    }
+
+    #[test]
+    fn enclosing_function_name_resolves_for_clause_node() {
+        let ctx = analyze_ok("-module(t).\nfoo() -> ok.\n");
+        let branch = &ctx.branches[0];
+        let clause = branch
+            .tree
+            .nodes()
+            .find(|n| n.kind() == erl_parse::SyntaxKind::FunctionClause)
+            .expect("function clause");
+        assert_eq!(
+            branch.enclosing_function_name(clause.node_id()).as_deref(),
+            Some("foo/0")
+        );
+    }
+
+    #[test]
+    fn enclosing_function_name_is_none_outside_function() {
+        let ctx = analyze_ok("-module(t).\nfoo() -> ok.\n");
+        let branch = &ctx.branches[0];
+        let attribute = branch
+            .tree
+            .nodes()
+            .find(|n| n.kind() == erl_parse::SyntaxKind::Attribute)
+            .expect("attribute");
+        assert_eq!(branch.enclosing_function_name(attribute.node_id()), None);
     }
 }

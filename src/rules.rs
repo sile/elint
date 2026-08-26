@@ -6,7 +6,7 @@ mod element_bif;
 mod newline_after_arrow;
 mod strict_generator;
 
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding, Span};
 
 /// One lint: a name, the markdown description, and a check function.
 #[derive(Debug)]
@@ -15,8 +15,8 @@ pub struct Rule {
     pub name: &'static str,
     /// Markdown text describing the rule.
     pub text: &'static str,
-    /// Returns original-file spans that violate the rule in one branch.
-    pub check: fn(&Context, &BranchContext) -> Vec<Span>,
+    /// Returns findings that violate the rule in one branch.
+    pub check: fn(&Context, &BranchContext) -> Vec<Finding>,
 }
 
 impl Rule {
@@ -24,7 +24,7 @@ impl Rule {
     pub const fn new(
         name: &'static str,
         text: &'static str,
-        check: fn(&Context, &BranchContext) -> Vec<Span>,
+        check: fn(&Context, &BranchContext) -> Vec<Finding>,
     ) -> Self {
         Self { name, text, check }
     }
@@ -73,7 +73,7 @@ pub(crate) mod test_support {
 
     /// Runs a rule's `check` against `src` and returns the finding texts.
     pub(crate) fn findings(
-        check: fn(&Context, &BranchContext) -> Vec<Span>,
+        check: fn(&Context, &BranchContext) -> Vec<Finding>,
         src: &str,
     ) -> Vec<String> {
         let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
@@ -84,7 +84,7 @@ pub(crate) mod test_support {
         );
         check(&ctx, &ctx.branches[0])
             .into_iter()
-            .map(|s| s.text(&ctx.text).to_string())
+            .map(|f| f.span.text(&ctx.text).to_string())
             .collect()
     }
 }

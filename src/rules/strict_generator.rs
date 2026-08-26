@@ -1,7 +1,7 @@
 //! `strict_generator` lint: require strict comprehension generators.
 
 use super::{Rule, token_span_in_node};
-use crate::{BranchContext, Context, Span};
+use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags relaxed comprehension generators.
 pub const RULE: Rule = Rule::new(
@@ -10,7 +10,7 @@ pub const RULE: Rule = Rule::new(
     check,
 );
 
-fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
+fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Finding> {
     let mut errors = Vec::new();
     for root in branch.tree.roots() {
         walk(branch, root, &mut errors);
@@ -18,7 +18,7 @@ fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
     errors
 }
 
-fn walk(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+fn walk(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Finding>) {
     if node.kind() == erl_parse::SyntaxKind::ZipQualifier {
         return;
     }
@@ -28,7 +28,7 @@ fn walk(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<
     }
 }
 
-fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
+fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Finding>) {
     let expected = match node.kind() {
         erl_parse::SyntaxKind::Generator | erl_parse::SyntaxKind::MapGenerator => {
             erl_tokenize::Symbol::LeftArrow
@@ -41,7 +41,10 @@ fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mu
     }) else {
         return;
     };
-    errors.push(span);
+    errors.push(Finding {
+        span,
+        node: node.node_id(),
+    });
 }
 
 #[cfg(test)]
