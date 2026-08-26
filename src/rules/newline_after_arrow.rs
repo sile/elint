@@ -105,7 +105,8 @@ fn first_lexical(
 ) -> Option<erl_parse::TokenIndex> {
     range.find_map(|i| {
         branch
-            .tokens
+            .tree
+            .tokens()
             .get(i.get())
             .filter(|t| t.kind().is_lexical())
             .map(|_| i)
@@ -118,7 +119,8 @@ fn prev_lexical(
 ) -> Option<erl_parse::TokenIndex> {
     (0..before.get()).rev().find_map(|i| {
         branch
-            .tokens
+            .tree
+            .tokens()
             .get(i)
             .filter(|t| t.kind().is_lexical())
             .map(|_| erl_parse::TokenIndex::new(i))
@@ -126,7 +128,7 @@ fn prev_lexical(
 }
 
 fn is_right_arrow(branch: &BranchContext, index: erl_parse::TokenIndex) -> bool {
-    branch.tokens.get(index.get()).is_some_and(|token| {
+    branch.tree.tokens().get(index.get()).is_some_and(|token| {
         token.kind() == erl_tokenize::TokenKind::Symbol(erl_tokenize::Symbol::RightArrow)
     })
 }

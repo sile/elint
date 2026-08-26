@@ -16,9 +16,8 @@ pub struct PreprocessDiagnostic {
 /// One explored conditional-arm path through the file.
 #[derive(Debug)]
 pub struct BranchContext {
-    /// Lexical tokens after preprocessing, in the order passed to `erl_parse`.
-    pub tokens: Vec<erl_tokenize::Token>,
-    /// Side table parallel to [`BranchContext::tokens`]: origin and source span of each token.
+    /// Side table parallel to `tree.tokens()`: origin and source span of each
+    /// token, in the same order as the parse tree's token slice.
     pub source_tokens: Vec<erl_pp::SourceToken>,
     /// Parse forest for the preprocessed token stream.
     pub tree: erl_parse::SyntaxTree,
@@ -60,7 +59,6 @@ impl Context {
                 let tokens: Vec<_> = source_tokens.iter().map(|t| *t.token()).collect();
                 let tree = erl_parse::parse(&tokens, erl_parse::ParseMode::Module);
                 BranchContext {
-                    tokens,
                     source_tokens,
                     tree,
                     preprocess_diagnostics,
@@ -309,8 +307,8 @@ mod tests {
         let ctx = analyze_ok("-module(foo).\n");
         let branch = &ctx.branches[0];
         assert!(branch.tree.diagnostics().is_empty());
-        assert_eq!(branch.tokens.len(), branch.source_tokens.len());
-        assert!(!branch.tokens.is_empty());
+        assert_eq!(branch.tree.tokens().len(), branch.source_tokens.len());
+        assert!(!branch.tree.tokens().is_empty());
         assert_eq!(branch.tree.roots().count(), 1);
     }
 
@@ -358,11 +356,17 @@ bar() -> ok.
         // Then arm and Else arm.
         assert_eq!(ctx.branches.len(), 2);
         let mainline = &ctx.branches[0];
-        let mainline_text: String = mainline.tokens.iter().map(|t| t.text(&ctx.text)).collect();
+        let mainline_text: String = mainline
+            .tree
+            .tokens()
+            .iter()
+            .map(|t| t.text(&ctx.text))
+            .collect();
         assert!(mainline_text.contains("then_arm"));
         assert!(mainline_text.contains("bar()"));
         let side_text: String = ctx.branches[1]
-            .tokens
+            .tree
+            .tokens()
             .iter()
             .map(|t| t.text(&ctx.text))
             .collect();
@@ -370,7 +374,7 @@ bar() -> ok.
         assert!(!side_text.contains("bar()"));
         // Every branch's tokens must map back to original-file text.
         for branch in &ctx.branches {
-            for (i, _token) in branch.tokens.iter().enumerate() {
+            for (i, _token) in branch.tree.tokens().iter().enumerate() {
                 let Some(span) = branch.span_of_range(erl_parse::TokenRange::new(
                     erl_parse::TokenIndex::new(i),
                     erl_parse::TokenIndex::new(i + 1),
@@ -398,7 +402,12 @@ bar() -> ok.
 ",
         );
         let side = &ctx.branches[1];
-        let side_text: String = side.tokens.iter().map(|t| t.text(&ctx.text)).collect();
+        let side_text: String = side
+            .tree
+            .tokens()
+            .iter()
+            .map(|t| t.text(&ctx.text))
+            .collect();
         assert!(side_text.contains("foo()"));
         assert!(!side_text.contains("bar()"));
     }
@@ -449,8 +458,9 @@ b2.
 ",
         );
         assert_eq!(ctx.branches.len(), 4);
-        let marker =
-            |branch: &BranchContext, m: &str| branch.tokens.iter().any(|t| t.text(&ctx.text) == m);
+        let marker = |branch: &BranchContext, m: &str| {
+            branch.tree.tokens().iter().any(|t| t.text(&ctx.text) == m)
+        };
         assert!(marker(&ctx.branches[0], "n1"));
         let mut seen = std::collections::HashSet::new();
         for branch in &ctx.branches {
@@ -481,7 +491,7 @@ b2.
         for branch in &ctx.branches {
             let present: Vec<_> = ["c1", "c2", "c3", "c4"]
                 .into_iter()
-                .filter(|m| branch.tokens.iter().any(|t| t.text(&ctx.text) == *m))
+                .filter(|m| branch.tree.tokens().iter().any(|t| t.text(&ctx.text) == *m))
                 .collect();
             assert_eq!(
                 present.len(),

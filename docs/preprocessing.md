@@ -18,10 +18,10 @@ For each `.erl` file elint runs a three-stage pipeline (`src/context.rs`):
    (`ParseMode::Module`).
 
 The driver may explore several preprocessor states for one file; each
-explored state becomes a `BranchContext` (tokens, origin side table, parse
-tree, preprocessor diagnostics). The first branch is the mainline. Rules run
-independently on each branch, and findings are mapped back to byte spans in
-the original file via the origin side table.
+explored state becomes a `BranchContext` (parse tree with its token slice,
+origin side table, preprocessor diagnostics). The first branch is the
+mainline. Rules run independently on each branch, and findings are mapped
+back to byte spans in the original file via the origin side table.
 
 ## Conditional branch exploration
 

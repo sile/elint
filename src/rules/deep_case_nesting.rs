@@ -69,7 +69,7 @@ fn is_depth_break(kind: erl_parse::SyntaxKind) -> bool {
 
 fn case_keyword_span(branch: &BranchContext, node: erl_parse::NodeView<'_>) -> Option<Span> {
     let index = node.range().find(|i| {
-        branch.tokens.get(i.get()).is_some_and(|token| {
+        branch.tree.tokens().get(i.get()).is_some_and(|token| {
             matches!(
                 token.kind(),
                 erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::Case)

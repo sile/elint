@@ -25,7 +25,7 @@ fn check(_ctx: &Context, branch: &BranchContext) -> Vec<Span> {
 
 fn if_keyword_span(branch: &BranchContext, node: erl_parse::NodeView<'_>) -> Option<Span> {
     let index = node.range().find(|i| {
-        branch.tokens.get(i.get()).is_some_and(|token| {
+        branch.tree.tokens().get(i.get()).is_some_and(|token| {
             matches!(
                 token.kind(),
                 erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::If)

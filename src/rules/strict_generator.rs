@@ -54,7 +54,8 @@ fn relaxed_arrow(
     };
     node.range().find(|i| {
         branch
-            .tokens
+            .tree
+            .tokens()
             .get(i.get())
             .is_some_and(|token| token.kind() == erl_tokenize::TokenKind::Symbol(expected))
     })
