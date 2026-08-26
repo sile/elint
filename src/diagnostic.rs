@@ -129,15 +129,18 @@ impl Color {
 /// error[code]: message
 ///   --> path:line:col
 ///    |
+///    | previous line, shown as context when it exists
 /// 10 |     element(1, T)
 ///    |     ^^^^^^^^^^^^
 ///    |
 /// note: a follow-up line when provided
 /// ```
 ///
-/// The caret spans `span` within the first line it touches. Tabs are
-/// expanded to four columns in the source and caret lines so the caret
-/// stays aligned.
+/// The caret spans `span` within the first line it touches. When the
+/// reported line is not the first line, the immediately preceding line is
+/// shown without a line number as context (an empty preceding line is
+/// omitted). Tabs are expanded to four columns in the source and caret
+/// lines so the caret stays aligned.
 pub fn render(
     w: &mut impl Write,
     color: Color,
@@ -165,6 +168,14 @@ pub fn render(
     writeln!(w, "{header}")?;
     writeln!(w, "{}{} {location}", " ".repeat(width), color.arrow("-->"))?;
     writeln!(w, "{bar}")?;
+
+    if line > 1 {
+        let (prev_start, prev_end) = source.index.line_range(source.text, line - 2);
+        let prev_text = &source.text[prev_start..prev_end];
+        if !prev_text.is_empty() {
+            writeln!(w, "{gutter}{}", expand_tabs(prev_text))?;
+        }
+    }
 
     let (line_start, line_end) = source.index.line_range(source.text, line - 1);
     let line_text = &source.text[line_start..line_end];
@@ -244,6 +255,7 @@ mod tests {
 error[newline_after_arrow]: summary
  --> t.erl:2:10
   |
+  | -module(t).
 2 | foo() -> ok.
   |          ^^
   |
@@ -262,6 +274,7 @@ error[newline_after_arrow]: summary
 error: message
   --> t.erl:11:10
    |
+   | j
 11 | foo() -> ok.
    |          ^^
    |
@@ -281,8 +294,67 @@ error: message
 error: message
  --> t.erl:2:5
   |
+  | foo() ->
 2 |     ok.
   |     ^^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn expands_tabs_in_preceding_line() {
+        let text = "\tpre\n\tok.\n";
+        let start = text.find("ok.").expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 2), None, "message", None);
+        // The tab in the preceding line expands to four columns, matching
+        // the error line's gutter alignment.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:2:5
+  |
+  |     pre
+2 |     ok.
+  |     ^^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn omits_empty_preceding_line() {
+        let text = "a\n\nfoo() -> ok.\n";
+        let start = text.find("ok.").expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 2), None, "message", None);
+        // The blank line before the error line contributes no context.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:3:10
+  |
+3 | foo() -> ok.
+  |          ^^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn first_line_error_shows_no_preceding_line() {
+        let text = "foo() -> ok.\n";
+        let start = text.find("ok.").expect("finding");
+        let out = render_to_string(text, Span::new(start, start + 2), None, "message", None);
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:1:10
+  |
+1 | foo() -> ok.
+  |          ^^
   |
 "
         );
