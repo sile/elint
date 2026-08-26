@@ -45,7 +45,7 @@ fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mu
         return;
     }
 
-    if let Some(span) = branch.span_of_range(node.range()) {
+    if let Some(span) = branch.span_of_range(node.token_range()) {
         errors.push(span);
     }
 }
@@ -68,7 +68,7 @@ fn is_element_callee(branch: &BranchContext, callee: erl_parse::NodeView<'_>) ->
 }
 
 fn atom_eq(branch: &BranchContext, node: erl_parse::NodeView<'_>, expected: &str) -> bool {
-    node.range().any(|i| {
+    node.indexed_tokens().any(|(i, _)| {
         branch.source_tokens.get(i.get()).is_some_and(|token| {
             matches!(token.value(), erl_tokenize::TokenValue::Atom(name) if name == expected)
         })

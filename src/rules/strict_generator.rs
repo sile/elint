@@ -29,22 +29,16 @@ fn walk(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<
 }
 
 fn check_node(branch: &BranchContext, node: erl_parse::NodeView<'_>, errors: &mut Vec<Span>) {
-    let Some(arrow) = relaxed_arrow(branch, node) else {
+    let Some(arrow) = relaxed_arrow(node) else {
         return;
     };
-    let Some(span) = branch.span_of_range(erl_parse::TokenRange::new(
-        arrow,
-        erl_parse::TokenIndex::new(arrow.get() + 1),
-    )) else {
+    let Some(span) = branch.span_of_range(erl_parse::TokenRange::single(arrow)) else {
         return;
     };
     errors.push(span);
 }
 
-fn relaxed_arrow(
-    branch: &BranchContext,
-    node: erl_parse::NodeView<'_>,
-) -> Option<erl_parse::TokenIndex> {
+fn relaxed_arrow(node: erl_parse::NodeView<'_>) -> Option<erl_parse::TokenIndex> {
     let expected = match node.kind() {
         erl_parse::SyntaxKind::Generator | erl_parse::SyntaxKind::MapGenerator => {
             erl_tokenize::Symbol::LeftArrow
@@ -52,12 +46,8 @@ fn relaxed_arrow(
         erl_parse::SyntaxKind::BitstringGenerator => erl_tokenize::Symbol::DoubleLeftArrow,
         _ => return None,
     };
-    node.range().find(|i| {
-        branch
-            .tree
-            .tokens()
-            .get(i.get())
-            .is_some_and(|token| token.kind() == erl_tokenize::TokenKind::Symbol(expected))
+    node.indexed_tokens().find_map(|(i, token)| {
+        (token.kind() == erl_tokenize::TokenKind::Symbol(expected)).then_some(i)
     })
 }
 

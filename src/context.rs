@@ -57,7 +57,7 @@ impl Context {
             .into_iter()
             .map(|(source_tokens, preprocess_diagnostics)| {
                 let tokens: Vec<_> = source_tokens.iter().map(|t| *t.token()).collect();
-                let tree = erl_parse::parse(&tokens, erl_parse::ParseMode::Module);
+                let tree = erl_parse::parse(tokens, erl_parse::ParseMode::Module);
                 BranchContext {
                     source_tokens,
                     tree,
@@ -375,10 +375,9 @@ bar() -> ok.
         // Every branch's tokens must map back to original-file text.
         for branch in &ctx.branches {
             for (i, _token) in branch.tree.tokens().iter().enumerate() {
-                let Some(span) = branch.span_of_range(erl_parse::TokenRange::new(
-                    erl_parse::TokenIndex::new(i),
-                    erl_parse::TokenIndex::new(i + 1),
-                )) else {
+                let Some(span) = branch
+                    .span_of_range(erl_parse::TokenRange::single(erl_parse::TokenIndex::new(i)))
+                else {
                     continue;
                 };
                 assert!(span.start < span.end);

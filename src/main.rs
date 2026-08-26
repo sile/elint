@@ -152,7 +152,7 @@ fn lint_file(
         if !branch.tree.diagnostics().is_empty() {
             for diagnostic in branch.tree.diagnostics() {
                 let span = branch
-                    .span_of_range(diagnostic.range())
+                    .span_of_range(diagnostic.token_range())
                     .unwrap_or(Span::ZERO);
                 report(
                     &color,

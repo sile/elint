@@ -40,7 +40,7 @@ fn is_one_line_fun(ctx: &Context, branch: &BranchContext, node: erl_parse::NodeV
     ) {
         return false;
     }
-    let Some(span) = branch.span_of_range(node.range()) else {
+    let Some(span) = branch.span_of_range(node.token_range()) else {
         return false;
     };
     !ctx.text[span.start..span.end].contains('\n')
@@ -61,7 +61,7 @@ fn check_node(
     else {
         return;
     };
-    let Some(body_first) = first_lexical(branch, body.range()) else {
+    let Some(body_first) = first_lexical(body) else {
         return;
     };
     let Some(arrow) = prev_lexical(branch, body_first) else {
@@ -99,18 +99,9 @@ fn is_clause_kind(kind: erl_parse::SyntaxKind) -> bool {
     )
 }
 
-fn first_lexical(
-    branch: &BranchContext,
-    mut range: erl_parse::TokenRange,
-) -> Option<erl_parse::TokenIndex> {
-    range.find_map(|i| {
-        branch
-            .tree
-            .tokens()
-            .get(i.get())
-            .filter(|t| t.kind().is_lexical())
-            .map(|_| i)
-    })
+fn first_lexical(node: erl_parse::NodeView<'_>) -> Option<erl_parse::TokenIndex> {
+    node.indexed_tokens()
+        .find_map(|(i, token)| token.kind().is_lexical().then_some(i))
 }
 
 fn prev_lexical(
@@ -141,10 +132,7 @@ fn is_source_origin(branch: &BranchContext, index: erl_parse::TokenIndex) -> boo
 }
 
 fn token_span(branch: &BranchContext, index: erl_parse::TokenIndex) -> Option<Span> {
-    branch.span_of_range(erl_parse::TokenRange::new(
-        index,
-        erl_parse::TokenIndex::new(index.get() + 1),
-    ))
+    branch.span_of_range(erl_parse::TokenRange::single(index))
 }
 
 #[cfg(test)]

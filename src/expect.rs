@@ -29,7 +29,7 @@ impl ExpectRules {
             if attribute.kind() != SyntaxKind::Attribute {
                 continue;
             }
-            let Some(attr_span) = branch.span_of_range(attribute.range()) else {
+            let Some(attr_span) = branch.span_of_range(attribute.token_range()) else {
                 continue;
             };
             let mut children = attribute.children();
@@ -42,7 +42,7 @@ impl ExpectRules {
             let Some(payload) = children.next() else {
                 return Err(Error::new(attr_span, "missing -elint_expect payload"));
             };
-            let Some(payload_span) = branch.span_of_range(payload.range()) else {
+            let Some(payload_span) = branch.span_of_range(payload.token_range()) else {
                 return Err(Error::new(attr_span, "missing -elint_expect payload"));
             };
             let payload_text = &ctx.text[payload_span.start..payload_span.end];
@@ -177,7 +177,7 @@ fn function_index(branch: &BranchContext) -> FunctionIndex {
         let Some(arity) = clause_arity(node) else {
             continue;
         };
-        let Some(span) = branch.span_of_range(node.range()) else {
+        let Some(span) = branch.span_of_range(node.token_range()) else {
             continue;
         };
         index.entry((name, arity)).or_default().push(span);
@@ -187,7 +187,7 @@ fn function_index(branch: &BranchContext) -> FunctionIndex {
 
 /// Reads the name atom of a function clause: its first lexical token.
 fn clause_name(branch: &BranchContext, node: NodeView<'_>) -> Option<String> {
-    node.range().find_map(|i| {
+    node.indexed_tokens().find_map(|(i, _)| {
         let token = branch.source_tokens.get(i.get())?;
         if !token.token().kind().is_lexical() {
             return None;
@@ -209,7 +209,7 @@ fn clause_arity(node: NodeView<'_>) -> Option<u64> {
 
 /// Returns whether the attribute name node spells `elint_expect`.
 fn is_elint_expect(branch: &BranchContext, name: NodeView<'_>) -> bool {
-    name.range().any(|i| {
+    name.indexed_tokens().any(|(i, _)| {
         branch.source_tokens.get(i.get()).is_some_and(|token| {
             matches!(token.value(), erl_tokenize::TokenValue::Atom(a) if a == "elint_expect")
         })
@@ -243,7 +243,7 @@ enum PayloadError {
 fn parse_expect_payload(source: &str) -> Result<ParsedExpect, PayloadError> {
     let wrapped = format!("{{{source}}}.");
     let tokens = erl_tokenize::scan_tokens(&wrapped).map_err(|_| PayloadError::Invalid)?;
-    let tree = erl_parse::parse(&tokens, erl_parse::ParseMode::TermList);
+    let tree = erl_parse::parse(tokens, erl_parse::ParseMode::TermList);
     if !tree.diagnostics().is_empty() {
         return Err(PayloadError::Invalid);
     }
