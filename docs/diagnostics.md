@@ -44,7 +44,8 @@ Any report makes elint exit with status 1 and print `Found {n} error(s)`.
   skipped; other branches still contribute findings.
 - **lint**: rule findings, unless suppressed by an `-elint_expect`
   attribute (see [expectations](expectations.md)). The first occurrence of
-  a rule also prints a suppression hint and a pointer to `elint explain`.
+  a rule also prints a suppression hint (`elint doc expectations`) and a
+  pointer to `elint explain`.
 - **expectations**: malformed `-elint_expect` attributes and expectations
   that never matched a finding are reported (see
   [expectations](expectations.md)).

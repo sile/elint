@@ -197,8 +197,8 @@ fn lint_file(
 
             let note = (!known_errors.contains(rule.name)).then(|| {
                 format!(
-                    "run `elint explain {}` for details; suppress with `-elint_expect({}, ...)`",
-                    rule.name, rule.name
+                    "run `elint explain {}` for details; see `elint doc expectations` for suppression",
+                    rule.name
                 )
             });
             report(
