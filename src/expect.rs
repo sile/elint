@@ -314,6 +314,8 @@ fn read_term_string(node: NodeView<'_>, source: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use super::*;
 
     fn analyze(src: &str) -> Context {
@@ -344,10 +346,7 @@ foo(T) ->
         let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         assert_eq!(expect.rules.len(), 1);
         assert_eq!(expect.rules[0].name, "element_bif");
-        assert!(matches!(
-            expect.rules[0].target,
-            ExpectTarget::Function(ref name, 1) if name == "foo"
-        ));
+        assert_matches!(expect.rules[0].target, ExpectTarget::Function(ref name, 1) if name == "foo");
         assert_eq!(expect.rules[0].reason, "dynamic tuple shape");
         assert_eq!(expect.rules[0].scope_spans.len(), 1);
         assert_eq!(
@@ -448,7 +447,7 @@ bar(T) ->
         let ctx = analyze(src);
         let mut expect = ExpectRules::new(&ctx, &[]).expect("expect");
         assert_eq!(expect.rules.len(), 1);
-        assert!(matches!(expect.rules[0].target, ExpectTarget::Module));
+        assert_matches!(expect.rules[0].target, ExpectTarget::Module);
         assert_eq!(
             expect.rules[0].scope_spans,
             vec![Span::new(0, ctx.text.len())]
