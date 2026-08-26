@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use elint::Span;
-use elint::diagnostic::{Color, Source};
+use elint::diagnostic::{Color, Endpoints, Source};
 
 fn main() -> noargs::Result<()> {
     let mut args = noargs::raw_args();
@@ -121,7 +121,16 @@ fn lint_file(
         Ok(ctx) => ctx,
         Err(e) => {
             let span = Span::new(e.position.offset(), e.position.offset());
-            report(&color, &source, None, &e.to_string(), span, None, None);
+            report(
+                &color,
+                &source,
+                None,
+                &e.to_string(),
+                span,
+                None,
+                None,
+                None,
+            );
             return 1;
         }
     };
@@ -131,7 +140,16 @@ fn lint_file(
     let mut expect = match elint::expect::ExpectRules::new(&ctx, target_lint_names) {
         Ok(expect) => expect,
         Err(e) => {
-            report(&color, &source, None, &e.to_string(), e.span, None, None);
+            report(
+                &color,
+                &source,
+                None,
+                &e.to_string(),
+                e.span,
+                None,
+                None,
+                None,
+            );
             return error_count + 1;
         }
     };
@@ -146,6 +164,7 @@ fn lint_file(
                 diagnostic.span,
                 None,
                 None,
+                None,
             );
             error_count += 1;
         }
@@ -155,12 +174,14 @@ fn lint_file(
                 let span = branch
                     .span_of_range(diagnostic.token_range())
                     .unwrap_or(Span::ZERO);
+                let endpoints = range_endpoints(branch, diagnostic.token_range());
                 report(
                     &color,
                     &source,
                     None,
                     &parse_diagnostic_message(*diagnostic),
                     span,
+                    endpoints,
                     None,
                     None,
                 );
@@ -186,6 +207,7 @@ fn lint_file(
                 Some(rule.name),
                 rule.summary(),
                 finding.span,
+                finding_endpoints(branch, finding.node),
                 branch.enclosing_function_name(finding.node).as_deref(),
                 note.as_deref(),
             );
@@ -202,7 +224,7 @@ fn lint_file(
             rule.target.describe(),
             rule.reason
         );
-        report(&color, &source, None, &message, rule.span, None, None);
+        report(&color, &source, None, &message, rule.span, None, None, None);
         error_count += 1;
     }
 
@@ -292,12 +314,36 @@ fn parse_diagnostic_message(diagnostic: erl_parse::Diagnostic) -> String {
     }
 }
 
+/// Resolves the exact first and last token spans of a finding's node, used
+/// to draw the carets of a multi-line diagnostic.
+fn finding_endpoints(branch: &elint::BranchContext, node: erl_parse::NodeId) -> Option<Endpoints> {
+    let view = branch.tree.view(node)?;
+    range_endpoints(branch, view.token_range())
+}
+
+/// Resolves the exact first and last token spans of a token range, used to
+/// draw the carets of a multi-line diagnostic.
+fn range_endpoints(
+    branch: &elint::BranchContext,
+    range: erl_parse::TokenRange,
+) -> Option<Endpoints> {
+    if range.is_empty() {
+        return None;
+    }
+    let first = branch.span_of_range(erl_parse::TokenRange::single(range.start()))?;
+    let last_index = erl_parse::TokenIndex::new(range.end().get() - 1);
+    let last = branch.span_of_range(erl_parse::TokenRange::single(last_index))?;
+    Some(Endpoints { first, last })
+}
+
+#[allow(clippy::too_many_arguments)]
 fn report(
     color: &Color,
     source: &Source<'_>,
     code: Option<&str>,
     message: &str,
     span: Span,
+    endpoints: Option<Endpoints>,
     enclosing: Option<&str>,
     note: Option<&str>,
 ) {
@@ -308,6 +354,7 @@ fn report(
         code,
         message,
         span,
+        endpoints,
         enclosing,
         note,
     );

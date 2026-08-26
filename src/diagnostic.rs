@@ -123,6 +123,20 @@ impl Color {
     }
 }
 
+/// Exact token endpoints of a multi-line span, used to place the carets on
+/// the start and end lines.
+///
+/// When available, the start-line caret covers the span's first token and
+/// the end-line caret covers its last token, instead of approximating from
+/// whitespace.
+#[derive(Debug, Clone, Copy)]
+pub struct Endpoints {
+    /// Byte range of the span's first token.
+    pub first: Span,
+    /// Byte range of the span's last token.
+    pub last: Span,
+}
+
 /// Renders one rustc-style diagnostic block:
 ///
 /// ```text
@@ -142,6 +156,11 @@ impl Color {
 /// omitted). `enclosing`, when present, is the enclosing function name
 /// appended to the location. Tabs are expanded to four columns in the
 /// source and caret lines so the caret stays aligned.
+///
+/// When `span` crosses lines, the end line is shown after an ellipsis
+/// (`...|`) with its own caret. `endpoints`, when present, anchors the
+/// start caret on the first token and the end caret on the last token;
+/// without it the end caret is derived by scanning back from `span.end`.
 #[allow(clippy::too_many_arguments)]
 pub fn render(
     w: &mut impl Write,
@@ -150,11 +169,13 @@ pub fn render(
     code: Option<&str>,
     message: &str,
     span: Span,
+    endpoints: Option<Endpoints>,
     enclosing: Option<&str>,
     note: Option<&str>,
 ) -> std::io::Result<()> {
     let (line, column) = source.index.line_col(source.text, span.start);
-    let width = line.to_string().len();
+    let (end_line, _) = source.index.line_col(source.text, span.end);
+    let width = line.to_string().len().max(end_line.to_string().len());
     let bar = format!("{} |", " ".repeat(width));
     let gutter = format!("{} | ", " ".repeat(width));
 
@@ -190,10 +211,84 @@ pub fn render(
     writeln!(w, "{line_number} | {}", expand_tabs(line_text))?;
 
     let span_end = span.end.min(line_end);
-    let visual = display_width(&source.text[line_start..span.start]);
-    let caret_len = display_width(&source.text[span.start..span_end]).max(1);
+    let (visual, caret_len) = if end_line != line {
+        match endpoints {
+            Some(ep) => {
+                let caret_end = ep.first.end.min(line_end);
+                (
+                    display_width(&source.text[line_start..ep.first.start]),
+                    display_width(&source.text[ep.first.start..caret_end]).max(1),
+                )
+            }
+            None => (
+                display_width(&source.text[line_start..span.start]),
+                display_width(&source.text[span.start..span_end]).max(1),
+            ),
+        }
+    } else {
+        (
+            display_width(&source.text[line_start..span.start]),
+            display_width(&source.text[span.start..span_end]).max(1),
+        )
+    };
     let caret = color.caret(&"^".repeat(caret_len));
     writeln!(w, "{gutter}{}{caret}", " ".repeat(visual))?;
+
+    if end_line != line {
+        writeln!(w, "{}|", ".".repeat(width))?;
+        if end_line > 1 {
+            let (prev_start, prev_end) = source.index.line_range(source.text, end_line - 2);
+            let prev_text = &source.text[prev_start..prev_end];
+            if !prev_text.is_empty() {
+                writeln!(w, "{gutter}{}", expand_tabs(prev_text))?;
+            }
+        }
+        let (end_start, end_end) = source.index.line_range(source.text, end_line - 1);
+        let end_text = &source.text[end_start..end_end];
+        let end_number = color.line_number(&format!("{end_line:>width$}"));
+        writeln!(w, "{end_number} | {}", expand_tabs(end_text))?;
+        let (end_visual, end_caret_len) = match endpoints {
+            Some(ep) => {
+                let caret_start = ep.last.start.max(end_start);
+                let caret_end = ep.last.end.min(end_end);
+                (
+                    display_width(&source.text[end_start..caret_start]),
+                    display_width(&source.text[caret_start..caret_end]).max(1),
+                )
+            }
+            None => {
+                let mut caret_end = span.end.min(end_end);
+                while caret_end > end_start {
+                    let c = source.text[..caret_end]
+                        .chars()
+                        .next_back()
+                        .expect("non-empty slice");
+                    if !c.is_whitespace() {
+                        break;
+                    }
+                    caret_end -= c.len_utf8();
+                }
+                let mut caret_start = caret_end;
+                while caret_start > end_start {
+                    let c = source.text[..caret_start]
+                        .chars()
+                        .next_back()
+                        .expect("non-empty slice");
+                    if c.is_whitespace() {
+                        break;
+                    }
+                    caret_start -= c.len_utf8();
+                }
+                (
+                    display_width(&source.text[end_start..caret_start]),
+                    display_width(&source.text[caret_start..caret_end]).max(1),
+                )
+            }
+        };
+        let end_caret = color.caret(&"^".repeat(end_caret_len));
+        writeln!(w, "{gutter}{}{end_caret}", " ".repeat(end_visual))?;
+    }
+
     writeln!(w, "{bar}")?;
 
     if let Some(note) = note {
@@ -239,6 +334,7 @@ mod tests {
             code,
             message,
             span,
+            None,
             None,
             note,
         )
@@ -473,6 +569,7 @@ note: see `elint explain r`
             None,
             "message",
             Span::new(start, start + 2),
+            None,
             Some("foo/0"),
             None,
         )
@@ -492,6 +589,74 @@ error: message
     }
 
     #[test]
+    fn shows_multiline_span_head_and_tail() {
+        let text = "foo() ->\n    case A of\n        a ->\n            ok\n    end.\n";
+        let start = text.find("case").expect("finding");
+        let end = text.find("end.").expect("finding") + 3;
+        let endpoints = Some(Endpoints {
+            first: Span::new(start, start + 4),
+            last: Span::new(end - 3, end),
+        });
+        let source = Source::new(Path::new("t.erl"), text);
+        let mut out = Vec::new();
+        render(
+            &mut out,
+            Color { enabled: false },
+            &source,
+            None,
+            "message",
+            Span::new(start, end),
+            endpoints,
+            None,
+            None,
+        )
+        .expect("write to Vec");
+        let out = String::from_utf8(out).expect("utf8");
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:2:5
+  |
+  | foo() ->
+2 |     case A of
+  |     ^^^^
+.|
+  |             ok
+5 |     end.
+  |     ^^^
+  |
+"
+        );
+    }
+
+    #[test]
+    fn shows_multiline_span_tail_without_endpoints() {
+        let text = "foo() ->\n    case A of\n        a ->\n            ok\n    end.\n";
+        let start = text.find("case").expect("finding");
+        let end = text.find("end.").expect("finding") + 3;
+        let out = render_to_string(text, Span::new(start, end), None, "message", None);
+        // Without endpoints the start caret runs to the end of the line and
+        // the end caret is derived by scanning back from span.end.
+        assert_eq!(
+            out,
+            "\
+error: message
+ --> t.erl:2:5
+  |
+  | foo() ->
+2 |     case A of
+  |     ^^^^^^^^^
+.|
+  |             ok
+5 |     end.
+  |     ^^^
+  |
+"
+        );
+    }
+
+    #[test]
     fn color_codes_are_emitted_when_enabled() {
         let text = "foo() -> ok.\n";
         let start = text.find("ok.").expect("finding");
@@ -504,6 +669,7 @@ error: message
             Some("r"),
             "m",
             Span::new(start, start + 1),
+            None,
             None,
             Some("note"),
         )

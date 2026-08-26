@@ -1,6 +1,6 @@
 //! `deep_case_nesting` lint: flag case nested three or more levels deep.
 
-use super::{Rule, token_span_in_node};
+use super::Rule;
 use crate::{BranchContext, Context, Finding};
 
 /// Lint rule that flags deeply nested `case` expressions.
@@ -33,12 +33,7 @@ fn walk(
     let child_depth = match node.kind() {
         erl_parse::SyntaxKind::CaseExpr => {
             if case_depth + 1 >= 3
-                && let Some(span) = token_span_in_node(branch, node, |token| {
-                    matches!(
-                        token.kind(),
-                        erl_tokenize::TokenKind::Keyword(erl_tokenize::Keyword::Case)
-                    )
-                })
+                && let Some(span) = branch.span_of_range(node.token_range())
             {
                 errors.push(Finding {
                     span,
@@ -78,7 +73,7 @@ fn is_depth_break(kind: erl_parse::SyntaxKind) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rules::test_support::findings;
+    use crate::rules::test_support::{finding_line_pairs, findings};
 
     #[test]
     fn flags_case_three_levels_deep() {
@@ -97,7 +92,10 @@ foo(A, B, C) ->
     end.
 ";
         // Depths: A=1, B=2, C=3. C is reported.
-        assert_eq!(findings(check, src), ["case"]);
+        assert_eq!(
+            finding_line_pairs(check, src),
+            [("case C of".to_string(), "end".to_string())]
+        );
     }
 
     #[test]
@@ -123,7 +121,14 @@ foo(A, B, C, D, E) ->
     end.
 ";
         // Depths: A=1, B=2, C=3, D=4, E=5. C, D and E are reported.
-        assert_eq!(findings(check, src), ["case", "case", "case"]);
+        assert_eq!(
+            finding_line_pairs(check, src),
+            [
+                ("case C of".to_string(), "end".to_string()),
+                ("case D of".to_string(), "end".to_string()),
+                ("case E of".to_string(), "end".to_string()),
+            ]
+        );
     }
 
     #[test]

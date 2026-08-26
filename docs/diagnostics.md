@@ -24,6 +24,8 @@ error[element_bif]: Disallow `element/2` with a literal index; use pattern match
 - A source line with a caret spanning the reported byte range (for a
   multi-line range, only its first line is shown). Tabs are expanded to
   four columns so the caret stays aligned.
+- When the reported byte range crosses lines, the end line is shown after
+  an ellipsis (`...|`) with its own caret over the span's last token.
 - When the reported line is not the first line, the immediately preceding
   line is shown without a line number as context; an empty preceding line
   is omitted.

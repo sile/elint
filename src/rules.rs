@@ -87,4 +87,27 @@ pub(crate) mod test_support {
             .map(|f| f.span.text(&ctx.text).to_string())
             .collect()
     }
+
+    /// Runs a rule's `check` against `src` and returns the trimmed first
+    /// and last line of each finding.
+    pub(crate) fn finding_line_pairs(
+        check: fn(&Context, &BranchContext) -> Vec<Finding>,
+        src: &str,
+    ) -> Vec<(String, String)> {
+        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
+        assert!(
+            ctx.branches[0].tree.diagnostics().is_empty(),
+            "parse diagnostics: {:?}",
+            ctx.branches[0].tree.diagnostics()
+        );
+        check(&ctx, &ctx.branches[0])
+            .into_iter()
+            .map(|f| {
+                let text = f.span.text(&ctx.text);
+                let first = text.lines().next().unwrap_or("").trim().to_string();
+                let last = text.lines().last().unwrap_or("").trim().to_string();
+                (first, last)
+            })
+            .collect()
+    }
 }
