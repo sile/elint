@@ -3,7 +3,6 @@ name = "elint"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.96"
-authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 license = "MIT"
 description = "Erlang code linter"
 homepage = "https://github.com/sile/elint"
