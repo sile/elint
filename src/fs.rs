@@ -1,4 +1,9 @@
 //! Collects Erlang source paths under a file or directory.
+//!
+//! [`collect_erlang_files`] returns every `.erl` / `.hrl` file under a path:
+//! a matching file path is returned as a single-element vec, and a directory
+//! is scanned recursively. Collecting files is separate from analyzing them;
+//! see [`crate::Context::analyze`].
 
 /// Walks `path` and returns every `.erl` / `.hrl` file.
 ///

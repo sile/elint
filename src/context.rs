@@ -1,4 +1,45 @@
 //! Per-file tokenize / preprocess / parse pipeline.
+//!
+//! [`Context::analyze`] runs the three-stage pipeline for one source text:
+//! tokenize with `erl_tokenize`, preprocess with `erl_pp` (responding to
+//! every `Awaiting*` event: include, conditional, macro expansion), and parse
+//! the preprocessed lexical tokens with `erl_parse` (`ParseMode::Module`).
+//!
+//! [`Context::analyze`] is an API that takes a path and a source string; it
+//! does not collect files. Recursively collecting `.erl` / `.hrl` under a
+//! file or directory is [`crate::fs::collect_erlang_files`].
+//!
+//! ## Branch exploration
+//!
+//! The driver explores several preprocessor states for one file. At each
+//! `AwaitingConditional` event the current `Fork` is cloned into a mainline
+//! side (`Branch::Then`) and a non-mainline side (`Branch::Else`). The
+//! mainline continues past the `-endif`; a non-mainline fork stops at the
+//! `-endif` that closes the conditional it was forked from, tracked with
+//! `Fork::depth` / `Fork::stop_depth`. Each source region is therefore
+//! scanned by exactly one fork, so findings do not duplicate across branches
+//! and the work stays linear in the input size instead of growing with the
+//! product of independent conditionals.
+//!
+//! Each explored state becomes a [`BranchContext`], which holds the branch's
+//! token origin data (`source_tokens`), its syntax tree, and its
+//! preprocessor diagnostics. [`BranchContext::span_of_range`] and
+//! `span_in_original_file` map tokens back to byte spans in the original
+//! file, so findings from any branch can be reported at the original source
+//! location.
+//!
+//! ## Error handling
+//!
+//! - A tokenize error aborts the file: [`Context::analyze`] returns
+//!   `Err(erl_tokenize::Error)` and no branch is linted.
+//! - A preprocessor structural error (stray `-else`, unclosed conditional,
+//!   macro arity mismatch, ...) is collected as a [`PreprocessDiagnostic`]
+//!   on the branch; the branch's lint still runs if the file parses.
+//! - A parse diagnostic is attached to the branch's tree; that branch's lint
+//!   is skipped, while other branches still contribute findings.
+//! - A preprocessor protocol error (a `step` / `resume_*` call outside the
+//!   expected event flow) is a driver bug and panics with
+//!   `preprocessor protocol`.
 
 use std::path::{Path, PathBuf};
 

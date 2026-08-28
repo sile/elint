@@ -4,7 +4,7 @@ How elint reports problems, and what it deliberately does not report.
 
 ## Output format
 
-Every report shares one rustc-style block:
+Diagnostics that have a source location use a rustc-style block:
 
 ```text
 error[element_bif]: Disallow `element/2` with a literal index; use pattern matching instead.
@@ -16,45 +16,38 @@ error[element_bif]: Disallow `element/2` with a literal index; use pattern match
    |
 ```
 
-- `error[code]`: the bracketed code is the lint rule name. Other reports
-  carry no code (`error: message`).
+- `error[code]`: the bracketed code is the lint rule name. Lint findings
+  carry this code; every other diagnostic carries no code
+  (`error: message`).
 - `--> path:line:col`: 1-based line and character column of the report.
   When a rule finding lies inside a function, the enclosing function name
   (`in foo/1`) is appended to the location line.
-- A source line with a caret spanning the reported byte range (for a
-  multi-line range, only its first line is shown). Tabs are expanded to
-  four columns so the caret stays aligned.
-- When the reported byte range crosses lines, the end line is shown after
-  an ellipsis (`...|`) with its own caret over the span's last token.
-- When the reported line is not the first line, the immediately preceding
-  line is shown without a line number as context; an empty preceding line
-  is omitted.
+- A source line with a caret spanning the reported byte range. When the
+  reported range crosses lines, its first and last lines are each shown with
+  a caret.
 - Colors are enabled only when stderr is a terminal and the `NO_COLOR`
   environment variable is not set.
 
-Any report makes elint exit with status 1 and print `Found {n} error(s)`.
+Errors without a source location, such as a path that does not exist or a
+file that cannot be read, are printed as a single plain line and carry no
+source block.
 
-## What each stage reports
+All problems are written to stderr. When at least one error is reported,
+elint exits with status 1 and prints `Found {n} error(s)`.
 
-- **tokenize**: a lexical error aborts the file; no branch is linted.
-- **preprocess**: structural errors of the preprocessor itself (stray
-  `-else`, unclosed conditional, macro arity mismatch, ...) are reported
-  per branch. The branch's lint still runs if the file parses.
-- **parse**: syntax errors are reported per branch. That branch's lint is
-  skipped; other branches still contribute findings.
-- **lint**: rule findings, unless suppressed by an `-elint_expect`
-  attribute (see
-  [elint_expect_attr](explain/elint_expect_attr.md)). The first occurrence of
-  a rule also prints a pointer to `elint --explain <name>`.
-- **expectations**: malformed `-elint_expect` attributes and expectations
-  that never matched a finding are reported (see
-  [elint_expect_attr](explain/elint_expect_attr.md)).
+## Notes
+
+- The first finding of each lint rule in a file prints a pointer to the
+  rule's description: run `elint --explain <name>` for details.
+- `-elint_expect` diagnostics (a malformed attribute, or an expectation that
+  never matched a finding) print a pointer to
+  [elint_expect_attr](explain/elint_expect_attr.md):
+  run `elint --explain elint_expect_attr` for details.
+
+Which problems each analysis stage (tokenize, preprocess, parse) reports is
+described in [preprocessing](preprocessing.md).
 
 ## `-error` / `-warning` directives are ignored
 
-elint scans every arm of every conditional (see
-[preprocessing](preprocessing.md)). A compiler takes one branch per
-conditional and only meets the directives in the branches it selects; elint
-would meet `-error` / `-warning` in every arm it scans, so reporting them
-would be noisy. Judging these directives is the compiler's job, not a
-linter's, so elint ignores them entirely.
+`-error` and `-warning` directives are deliberately not reported; see
+[preprocessing](preprocessing.md) for the reason.

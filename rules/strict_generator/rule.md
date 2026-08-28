@@ -79,8 +79,9 @@ it is a performance trade-off.
 
 A relaxed generator used intentionally as a filter is still reported. When the
 relaxed form is noticeably simpler or faster than any strict equivalent,
-keeping it is reasonable. Declare the intent with `-elint_expect`, and add a
-comment next to the generator if the reason is not obvious:
+keeping it is reasonable. Declare the intent with an `-elint_expect` attribute
+(see `elint --explain elint_expect_attr`), and add a comment next to the
+generator if the reason is not obvious:
 
 ```erlang
 -elint_expect(strict_generator, {function, foo, 1}, "filters ok/error pairs; strict would raise badmatch").

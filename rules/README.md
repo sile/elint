@@ -49,9 +49,14 @@ An example of the preferred alternative.
 ## Known limitations
 
 Acceptable uses that are still reported and therefore require suppression.
-```
+Omit this section when the rule has none.
 
-Omit `Known limitations` when the rule has none.
+Point to a shared explanation (for example `elint --explain elint_expect_attr`)
+only when the rule has a legitimate intentional exception or known limitation.
+Do not add suppression boilerplate shared by every rule. When the rule does
+point to one, first explain in which cases suppression is appropriate, then
+give the shared explanation or a concrete `-elint_expect` attribute.
+```
 
 ## Adding a rule
 
@@ -72,4 +77,6 @@ elint --lint <name> rules/<name>/ok.erl
 
 Shared explanations (such as the `-elint_expect` notation) live under
 `docs/explain/` and are printed with `elint --explain <name>`; run
-`elint --list` for the list.
+`elint --list` for the list. Link to a shared explanation from a rule's
+`Known limitations` only when that rule has legitimate intentional uses; see
+`docs/explain/README.md` for the placement rules.

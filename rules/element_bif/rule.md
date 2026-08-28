@@ -39,9 +39,11 @@ first({X, _, _}) ->
 ## Known limitations
 
 The rule does not decide whether the tuple shape is fixed. A literal index into
-a tuple of unknown size is still reported. Suppress the finding if that use is
-intentional.
+a tuple of unknown size is still reported. Suppress such a use with an
+`-elint_expect` attribute (see `elint --explain elint_expect_attr`) when the
+index is intentional.
 
 The rule does not resolve callees. An unqualified `element/2` that is no longer
 the BIF because of `no_auto_import` and a local definition is still reported.
-Suppress the finding if that use is intentional.
+Suppress such a use with an `-elint_expect` attribute (see
+`elint --explain elint_expect_attr`) when it is intentional.
