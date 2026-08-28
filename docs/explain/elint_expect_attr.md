@@ -1,4 +1,4 @@
-# Expectations and suppression
+# The `-elint_expect` attribute
 
 An `-elint_expect` attribute declares that a finding is intentional. elint
 suppresses findings that match an expectation, and reports an expectation

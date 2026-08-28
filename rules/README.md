@@ -40,7 +40,7 @@ incorrect.
 
 ## Example
 
-An example that is reported (self-contained for `elint explain`).
+An example that is reported (self-contained for `elint --explain <name>`).
 
 Use instead:
 
@@ -68,8 +68,8 @@ elint --lint <name> rules/<name>/ok.erl
 `ng.erl` must produce findings and a non-zero exit.
 `ok.erl` must produce no findings and a zero exit.
 
-`elint explain <name>` prints `rules/<name>/rule.md`.
+`elint --explain <name>` prints `rules/<name>/rule.md`.
 
-Project-wide documents (the `-elint_expect` notation, diagnostics, the
-preprocessing pipeline) are available with `elint doc <name>`; run `elint doc`
-for the list.
+Shared explanations (such as the `-elint_expect` notation) live under
+`docs/explain/` and are printed with `elint --explain <name>`; run
+`elint --list` for the list.

@@ -17,45 +17,21 @@ fn main() -> noargs::Result<()> {
     }
     noargs::HELP_FLAG.take_help(&mut args);
 
-    if noargs::cmd("explain")
-        .doc("Print the markdown description of a lint rule")
+    let explain_name: Option<String> = noargs::opt("explain")
+        .ty("NAME")
+        .doc("Print an explanation for a lint rule or shared topic and exit")
         .take(&mut args)
-        .is_present()
-    {
-        let name: String = noargs::arg("<RULE_NAME>")
-            .take(&mut args)
-            .then(|a| Ok::<_, &str>(a.value().to_string()))?;
-        if let Some(help) = args.finish()? {
-            print!("{help}");
-            return Ok(());
-        }
-        explain_rule(&name)?;
-        return Ok(());
-    }
-
-    if noargs::cmd("doc")
-        .doc("Print an embedded document, or list the available documents")
+        .present_and_then(|o| o.value().parse())?;
+    let list_requested = noargs::flag("list")
+        .doc("List available explanations and exit")
         .take(&mut args)
-        .is_present()
-    {
-        let name: Option<String> = noargs::arg("<DOC_NAME>")
-            .take(&mut args)
-            .present_and_then(|a| Ok::<_, &str>(a.value().to_string()))?;
-        if let Some(help) = args.finish()? {
-            print!("{help}");
-            return Ok(());
-        }
-        match name {
-            Some(name) => print_doc(&name),
-            None => print_doc_list(),
-        }
-        return Ok(());
-    }
+        .is_present();
 
     let mut target_lint_names: Vec<String> = Vec::new();
     while let Some(a) = noargs::opt("lint")
         .short('l')
         .ty("LINT_RULE_NAME")
+        .doc("Only run the named lint rule; may be repeated")
         .take(&mut args)
         .present_and_then(|a| a.value().parse())?
     {
@@ -64,6 +40,7 @@ fn main() -> noargs::Result<()> {
 
     let mut paths: Vec<std::path::PathBuf> = Vec::new();
     while let Some(path) = noargs::arg("[PATH]..")
+        .doc("Erlang source files or directories to lint; defaults to `src/` and `tests/`")
         .take(&mut args)
         .present_and_then(|a| a.value().parse())?
     {
@@ -72,6 +49,23 @@ fn main() -> noargs::Result<()> {
 
     if let Some(help) = args.finish()? {
         print!("{help}");
+        return Ok(());
+    }
+
+    if explain_name.is_some() || list_requested {
+        if explain_name.is_some() && list_requested {
+            eprintln!("error: --explain and --list cannot be used together");
+            std::process::exit(1);
+        }
+        if !target_lint_names.is_empty() || !paths.is_empty() {
+            eprintln!("error: --explain / --list cannot be combined with paths or --lint");
+            std::process::exit(1);
+        }
+        if let Some(name) = explain_name {
+            print_explanation(&name);
+        } else {
+            print!("{}", explanation_list());
+        }
         return Ok(());
     }
 
@@ -148,7 +142,7 @@ fn lint_file(
                 e.span,
                 None,
                 None,
-                None,
+                Some("run `elint --explain elint_expect_attr` for details"),
             );
             return error_count + 1;
         }
@@ -195,12 +189,8 @@ fn lint_file(
                 continue;
             }
 
-            let note = (!known_errors.contains(rule.name)).then(|| {
-                format!(
-                    "run `elint explain {}` for details; see `elint doc expectations` for suppression",
-                    rule.name
-                )
-            });
+            let note = (!known_errors.contains(rule.name))
+                .then(|| format!("run `elint --explain {}` for details", rule.name));
             report(
                 &color,
                 &source,
@@ -224,59 +214,66 @@ fn lint_file(
             rule.target.describe(),
             rule.reason
         );
-        report(&color, &source, None, &message, rule.span, None, None, None);
+        report(
+            &color,
+            &source,
+            None,
+            &message,
+            rule.span,
+            None,
+            None,
+            Some("run `elint --explain elint_expect_attr` for details"),
+        );
         error_count += 1;
     }
 
     error_count
 }
 
-fn explain_rule(name: &str) -> noargs::Result<()> {
-    let Some(rule) = elint::rules::RULES.iter().find(|rule| rule.name == name) else {
-        eprintln!("unknown lint rule: {name}");
-        std::process::exit(1);
-    };
-    print!("{}", rule.text);
-    Ok(())
+/// Shared explanations embedded in the binary, keyed by the `--explain` name.
+/// The stem of each file in `docs/explain/` matches its key.
+const EXPLAINS: &[(&str, &str)] = &[(
+    "elint_expect_attr",
+    include_str!("../docs/explain/elint_expect_attr.md"),
+)];
+
+/// Returns the markdown text for `name`, looking first for a lint rule and
+/// then for a shared explanation.
+fn find_explanation(name: &str) -> Option<&'static str> {
+    elint::rules::RULES
+        .iter()
+        .find(|rule| rule.name == name)
+        .map(|rule| rule.text)
+        .or_else(|| {
+            EXPLAINS
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, text)| *text)
+        })
 }
 
-/// Documents embedded in the binary, keyed by the `elint doc` name.
-const DOCS: &[(&str, &str, &str)] = &[
-    (
-        "expectations",
-        "The `-elint_expect` notation and suppression",
-        include_str!("../docs/expectations.md"),
-    ),
-    (
-        "diagnostics",
-        "How problems are reported and what is ignored",
-        include_str!("../docs/diagnostics.md"),
-    ),
-    (
-        "preprocessing",
-        "The tokenize / preprocess / parse pipeline",
-        include_str!("../docs/preprocessing.md"),
-    ),
-];
-
-fn print_doc(name: &str) {
-    let Some((_, _, text)) = DOCS.iter().find(|(n, _, _)| *n == name) else {
-        eprintln!("unknown document: {name}");
+/// Prints the explanation for `name`, or fails with a pointer to `--list`.
+fn print_explanation(name: &str) {
+    let Some(text) = find_explanation(name) else {
+        eprintln!("error: unknown explanation: {name}");
+        eprintln!("run `elint --list` to see the available explanations");
         std::process::exit(1);
     };
     print!("{text}");
 }
 
-fn print_doc_list() {
-    println!("{}", doc_list());
-}
-
-fn doc_list() -> String {
-    let mut out = String::from("Available documents:\n");
-    for (name, description, _) in DOCS {
-        out.push_str(&format!("- {name}: {description}\n"));
+/// Renders the `--list` output: lint rules and shared explanations in name
+/// order, with a usage hint at the end.
+fn explanation_list() -> String {
+    let mut out = String::from("Lint rules:\n");
+    for rule in elint::rules::RULES {
+        out.push_str(&format!("  {}\n", rule.name));
     }
-    out.push_str("\nRun `elint doc <name>` to print one.\n");
+    out.push_str("\nAdditional explanations:\n");
+    for (name, _) in EXPLAINS {
+        out.push_str(&format!("  {name}\n"));
+    }
+    out.push_str("\nRun `elint --explain <name>` to print one.\n");
     out
 }
 
@@ -365,15 +362,71 @@ mod tests {
     use super::*;
 
     #[test]
-    fn doc_list_lists_every_document() {
-        let out = doc_list();
-        for (name, _, _) in DOCS {
-            assert!(out.contains(&format!("- {name}:")), "{out:?}");
+    fn explanation_list_lists_every_rule_and_shared_explanation() {
+        let out = explanation_list();
+        for rule in elint::rules::RULES {
+            assert!(out.contains(&format!("  {}\n", rule.name)), "{out:?}");
         }
-        assert!(out.starts_with("Available documents:\n"), "{out:?}");
+        for (name, _) in EXPLAINS {
+            assert!(out.contains(&format!("  {name}\n")), "{out:?}");
+        }
+        assert!(out.starts_with("Lint rules:\n"), "{out:?}");
+        assert!(out.contains("\nAdditional explanations:\n"), "{out:?}");
         assert!(
-            out.ends_with("\nRun `elint doc <name>` to print one.\n"),
+            out.ends_with("\nRun `elint --explain <name>` to print one.\n"),
             "{out:?}"
         );
+    }
+
+    #[test]
+    fn explanation_list_is_sorted_by_name() {
+        let out = explanation_list();
+        let rules: Vec<&str> = out
+            .split("\nAdditional explanations:\n")
+            .next()
+            .expect("Additional explanations section")
+            .lines()
+            .skip(1)
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect();
+        let mut sorted = rules.clone();
+        sorted.sort_unstable();
+        assert_eq!(rules, sorted, "{out:?}");
+    }
+
+    #[test]
+    fn find_explanation_returns_rule_then_shared_text() {
+        let rule = elint::rules::RULES
+            .iter()
+            .find(|rule| rule.name == "element_bif")
+            .expect("element_bif rule");
+        assert_eq!(find_explanation("element_bif"), Some(rule.text));
+        let (_, text) = EXPLAINS
+            .iter()
+            .find(|(name, _)| *name == "elint_expect_attr")
+            .expect("elint_expect_attr explanation");
+        assert_eq!(find_explanation("elint_expect_attr"), Some(*text));
+    }
+
+    #[test]
+    fn find_explanation_rejects_unknown_names() {
+        assert_eq!(find_explanation("README"), None);
+        assert_eq!(find_explanation("no_such_name"), None);
+    }
+
+    #[test]
+    fn explanation_names_do_not_overlap_rule_names() {
+        for (name, _) in EXPLAINS {
+            assert!(
+                !elint::rules::RULES.iter().any(|rule| rule.name == *name),
+                "shared explanation name collides with a lint rule: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn explanation_list_does_not_mention_readme() {
+        assert!(!explanation_list().contains("README"));
     }
 }

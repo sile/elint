@@ -11,9 +11,10 @@ Lint rules assume Erlang/OTP 29.0 or later.
 - [Preprocessing](docs/preprocessing.md): how elint preprocesses Erlang
   source, including conditional-branch exploration and include resolution
   policy.
-- [Expectations](docs/expectations.md): the `-elint_expect` notation and
-  suppression.
 - [Diagnostics](docs/diagnostics.md): how elint reports problems and why
   `-error` / `-warning` directives are ignored.
+- [The `-elint_expect` attribute](docs/explain/elint_expect_attr.md): the
+  `-elint_expect` notation and suppression.
 
-`elint doc` prints any of these documents from the command line.
+Run `elint --list` to list the available lint rule and shared explanations;
+`elint --explain <name>` prints one.

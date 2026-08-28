@@ -43,12 +43,12 @@ Any report makes elint exit with status 1 and print `Found {n} error(s)`.
 - **parse**: syntax errors are reported per branch. That branch's lint is
   skipped; other branches still contribute findings.
 - **lint**: rule findings, unless suppressed by an `-elint_expect`
-  attribute (see [expectations](expectations.md)). The first occurrence of
-  a rule also prints a suppression hint (`elint doc expectations`) and a
-  pointer to `elint explain`.
+  attribute (see
+  [elint_expect_attr](explain/elint_expect_attr.md)). The first occurrence of
+  a rule also prints a pointer to `elint --explain <name>`.
 - **expectations**: malformed `-elint_expect` attributes and expectations
   that never matched a finding are reported (see
-  [expectations](expectations.md)).
+  [elint_expect_attr](explain/elint_expect_attr.md)).
 
 ## `-error` / `-warning` directives are ignored
 
