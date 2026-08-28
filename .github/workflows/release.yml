@@ -76,3 +76,78 @@ jobs:
         run: gh release create ${{ github.ref_name }} --title "${{ github.ref_name }}" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # The release must already exist before any asset upload, so every binary
+  # job depends on `github-release`. The three jobs run in parallel and
+  # attach statically linked or SDK-pinned binaries to the same tag.
+  # Asset names strip the leading `v` from the tag, e.g. `elint-0.0.3.xxx`.
+
+  linux-x86_64-binary:
+    name: Upload Binary for Linux x86_64
+    needs: github-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # musl-tools provides the musl linker for a fully static binary.
+      - run: sudo apt install -y musl-tools
+      - run: rustup update stable
+      - run: rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release --target=x86_64-unknown-linux-musl
+      - name: Upload Release Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mv target/x86_64-unknown-linux-musl/release/elint \
+            elint-${GITHUB_REF_NAME#v}.x86_64-unknown-linux-musl
+          gh release upload ${{ github.ref_name }} \
+            elint-${GITHUB_REF_NAME#v}.x86_64-unknown-linux-musl
+
+  linux-arm64-binary:
+    name: Upload Binary for Linux arm64
+    needs: github-release
+    # arm64 native runner, so aarch64-unknown-linux-musl needs no cross
+    # toolchain: apt musl-tools on this image is the aarch64 one.
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: sudo apt install -y musl-tools
+      - run: rustup update stable
+      - run: rustup target add aarch64-unknown-linux-musl
+      - run: cargo build --release --target=aarch64-unknown-linux-musl
+      - name: Upload Release Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mv target/aarch64-unknown-linux-musl/release/elint \
+            elint-${GITHUB_REF_NAME#v}.aarch64-unknown-linux-musl
+          gh release upload ${{ github.ref_name }} \
+            elint-${GITHUB_REF_NAME#v}.aarch64-unknown-linux-musl
+
+  macos-binary:
+    name: Upload Binary for macOS
+    needs: github-release
+    # macos-15 (not macos-latest): the older SDK keeps the minimum macOS
+    # version of the produced binaries low and the image stable.
+    runs-on: macos-15
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        target: ["x86_64-apple-darwin", "aarch64-apple-darwin"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup update stable
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --target=${{ matrix.target }}
+      - name: Upload Release Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mv target/${{ matrix.target }}/release/elint \
+            elint-${GITHUB_REF_NAME#v}.${{ matrix.target }}
+          gh release upload ${{ github.ref_name }} \
+            elint-${GITHUB_REF_NAME#v}.${{ matrix.target }}
