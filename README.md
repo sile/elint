@@ -63,27 +63,25 @@ Pre-built binaries for Linux and macOS are available from the
 - `x86_64-apple-darwin` (macOS Intel)
 - `aarch64-apple-darwin` (macOS Apple Silicon)
 
-For example, download the Linux x86_64 binary with the GitHub CLI:
+For example, download the Linux x86_64 binary from the latest release with
+the GitHub CLI:
 
 ```console
-$ VERSION=0.1.0
-$ gh release download v${VERSION} --repo sile/elint \
-    --pattern "elint-${VERSION}.x86_64-unknown-linux-musl"
-$ chmod +x elint-${VERSION}.x86_64-unknown-linux-musl
-$ ./elint-${VERSION}.x86_64-unknown-linux-musl --version
-```
-
-Or with `curl`:
-
-```console
-$ VERSION=0.1.0
-$ curl -L https://github.com/sile/elint/releases/download/v${VERSION}/elint-${VERSION}.x86_64-unknown-linux-musl -o elint
-$ chmod +x elint
-$ ./elint --version
+$ gh release download --repo sile/elint \
+    --pattern "elint-*.x86_64-unknown-linux-musl"
+$ chmod +x elint-*.x86_64-unknown-linux-musl
+$ ./elint-*.x86_64-unknown-linux-musl --version
 ```
 
 The asset name is `elint-<version>.<target>`, where `<target>` is one of the
 triples above and `<version>` is the release version without the leading `v`.
+To download a specific version, pass its tag name (for example `v0.1.0`)
+instead of the latest release:
+
+```console
+$ gh release download v0.1.0 --repo sile/elint \
+    --pattern "elint-0.1.0.x86_64-unknown-linux-musl"
+```
 
 ### With Cargo
 
