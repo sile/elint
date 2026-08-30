@@ -60,7 +60,6 @@ Pre-built binaries for Linux and macOS are available from the
 
 - `x86_64-unknown-linux-musl` (Linux x86_64, fully static)
 - `aarch64-unknown-linux-musl` (Linux arm64, fully static)
-- `x86_64-apple-darwin` (macOS Intel)
 - `aarch64-apple-darwin` (macOS Apple Silicon)
 
 For example, download the Linux x86_64 binary from the latest release with

@@ -135,19 +135,16 @@ jobs:
     runs-on: macos-15
     permissions:
       contents: write
-    strategy:
-      matrix:
-        target: ["x86_64-apple-darwin", "aarch64-apple-darwin"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup update stable
-      - run: rustup target add ${{ matrix.target }}
-      - run: cargo build --release --target=${{ matrix.target }}
+      - run: rustup target add aarch64-apple-darwin
+      - run: cargo build --release --target=aarch64-apple-darwin
       - name: Upload Release Asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mv target/${{ matrix.target }}/release/elint \
-            elint-${GITHUB_REF_NAME#v}.${{ matrix.target }}
+          mv target/aarch64-apple-darwin/release/elint \
+            elint-${GITHUB_REF_NAME#v}.aarch64-apple-darwin
           gh release upload ${{ github.ref_name }} \
-            elint-${GITHUB_REF_NAME#v}.${{ matrix.target }}
+            elint-${GITHUB_REF_NAME#v}.aarch64-apple-darwin
