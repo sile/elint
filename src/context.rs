@@ -357,10 +357,7 @@ fn skipped_include_from_directive(include: &erl_pp::IncludeDirective) -> Option<
     let directive = span_in_original_file(&include.parent_origin, include.directive_span)?;
     let is_lib = matches!(include.kind, erl_pp::IncludeKind::IncludeLib);
     let name = if is_lib { "include_lib" } else { "include" };
-    name_span_after_hyphen(directive, name).map(|name_span| SkippedInclude {
-        name_span,
-        is_lib,
-    })
+    name_span_after_hyphen(directive, name).map(|name_span| SkippedInclude { name_span, is_lib })
 }
 
 /// Maps a consumed `-define` to its attribute-name span in the original file.
