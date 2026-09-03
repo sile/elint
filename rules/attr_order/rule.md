@@ -9,7 +9,7 @@ This rule reports two kinds of violations:
 1. **Header order.** Before the first function clause, the first occurrence of
    each attribute class must follow this order:
    - `-module`
-   - `-behaviour` / `-behavior` (optional)
+   - `-behaviour` / `-behavior`
    - `-export` / `-export_type`
    - `-include` / `-include_lib`
    - `-record` / `-type` / `-opaque` / `-define` (any order within this group)
