@@ -54,6 +54,30 @@ pub struct PreprocessDiagnostic {
     pub message: String,
 }
 
+/// A `-include` / `-include_lib` directive skipped by the preprocessor.
+///
+/// Includes are not resolved, so they never appear in [`BranchContext::tree`].
+/// Rules that care about directive placement (for example attribute order)
+/// read these retained sites instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SkippedInclude {
+    /// Byte range of the attribute name (`include` or `include_lib`).
+    pub name_span: Span,
+    /// Whether the directive was `-include_lib`.
+    pub is_lib: bool,
+}
+
+/// A `-define` directive consumed by the preprocessor.
+///
+/// Macro definitions are registered by `erl_pp` and do not remain in
+/// [`BranchContext::tree`]. Rules that care about attribute placement read
+/// these retained sites instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SkippedDefine {
+    /// Byte range of the attribute name `define`.
+    pub name_span: Span,
+}
+
 /// One explored conditional-arm path through the file.
 #[derive(Debug)]
 pub struct BranchContext {
@@ -64,6 +88,10 @@ pub struct BranchContext {
     pub tree: erl_parse::SyntaxTree,
     /// Preprocessor diagnostics (`-error` / `-warning`, input errors).
     pub preprocess_diagnostics: Vec<PreprocessDiagnostic>,
+    /// `-include` / `-include_lib` sites consumed while skipping headers.
+    pub skipped_includes: Vec<SkippedInclude>,
+    /// `-define` sites consumed while registering macros.
+    pub skipped_defines: Vec<SkippedDefine>,
 }
 
 /// Analyzed Erlang file: original source and one analysis per explored
@@ -96,15 +124,19 @@ impl Context {
         );
         let branches = preprocess(source)
             .into_iter()
-            .map(|(source_tokens, preprocess_diagnostics)| {
-                let tokens: Vec<_> = source_tokens.iter().map(|t| *t.token()).collect();
-                let tree = erl_parse::parse(tokens, erl_parse::ParseMode::Module);
-                BranchContext {
-                    source_tokens,
-                    tree,
-                    preprocess_diagnostics,
-                }
-            })
+            .map(
+                |(source_tokens, preprocess_diagnostics, skipped_includes, skipped_defines)| {
+                    let tokens: Vec<_> = source_tokens.iter().map(|t| *t.token()).collect();
+                    let tree = erl_parse::parse(tokens, erl_parse::ParseMode::Module);
+                    BranchContext {
+                        source_tokens,
+                        tree,
+                        preprocess_diagnostics,
+                        skipped_includes,
+                        skipped_defines,
+                    }
+                },
+            )
             .collect();
         Ok(Self {
             path,
@@ -199,7 +231,17 @@ struct Fork {
     stop_depth: Option<usize>,
     source_tokens: Vec<erl_pp::SourceToken>,
     diagnostics: Vec<PreprocessDiagnostic>,
+    skipped_includes: Vec<SkippedInclude>,
+    skipped_defines: Vec<SkippedDefine>,
 }
+
+/// One explored preprocessor fork's outputs.
+type PreprocessBranch = (
+    Vec<erl_pp::SourceToken>,
+    Vec<PreprocessDiagnostic>,
+    Vec<SkippedInclude>,
+    Vec<SkippedDefine>,
+);
 
 /// Drives the preprocessor across every conditional arm.
 ///
@@ -209,15 +251,15 @@ struct Fork {
 /// that closes the conditional they were forked from, tracked with
 /// [`Fork::depth`] / [`Fork::stop_depth`]. Each source region is therefore
 /// scanned by exactly one fork and work stays linear in the input size.
-fn preprocess(
-    source: erl_pp::Source,
-) -> Vec<(Vec<erl_pp::SourceToken>, Vec<PreprocessDiagnostic>)> {
+fn preprocess(source: erl_pp::Source) -> Vec<PreprocessBranch> {
     let mut pending = vec![Fork {
         pp: erl_pp::Preprocessor::new([source]),
         depth: 0,
         stop_depth: None,
         source_tokens: Vec::new(),
         diagnostics: Vec::new(),
+        skipped_includes: Vec::new(),
+        skipped_defines: Vec::new(),
     }];
     let mut done = Vec::new();
 
@@ -226,7 +268,10 @@ fn preprocess(
             let event = fork.pp.step().expect("preprocessor protocol");
             match event {
                 erl_pp::Event::Token(token) => fork.source_tokens.push(token),
-                erl_pp::Event::AwaitingInclude(_) => {
+                erl_pp::Event::AwaitingInclude(include) => {
+                    if let Some(skipped) = skipped_include_from_directive(&include) {
+                        fork.skipped_includes.push(skipped);
+                    }
                     fork.pp
                         .resume_include(empty_source("<skipped-include>"))
                         .expect("preprocessor protocol");
@@ -257,6 +302,8 @@ fn preprocess(
                         stop_depth: Some(base_depth),
                         source_tokens: Vec::new(),
                         diagnostics: Vec::new(),
+                        skipped_includes: Vec::new(),
+                        skipped_defines: Vec::new(),
                     });
                 }
                 erl_pp::Event::AwaitingMacroExpansion(_) => {
@@ -276,7 +323,12 @@ fn preprocess(
                         message: preprocess_error_message(&error),
                     });
                 }
-                erl_pp::Event::MacroDefined(_) | erl_pp::Event::MacroUndefined(_) => {}
+                erl_pp::Event::MacroDefined(definition) => {
+                    if let Some(skipped) = skipped_define_from_definition(&definition) {
+                        fork.skipped_defines.push(skipped);
+                    }
+                }
+                erl_pp::Event::MacroUndefined(_) => {}
                 erl_pp::Event::BranchBoundary(boundary) => {
                     if matches!(boundary, erl_pp::BranchBoundary::Endif { .. }) {
                         fork.depth = fork.depth.saturating_sub(1);
@@ -288,10 +340,43 @@ fn preprocess(
                 erl_pp::Event::Complete => break,
             }
         }
-        done.push((fork.source_tokens, fork.diagnostics));
+        done.push((
+            fork.source_tokens,
+            fork.diagnostics,
+            fork.skipped_includes,
+            fork.skipped_defines,
+        ));
     }
 
     done
+}
+
+/// Maps a skipped include directive to its attribute-name span in the
+/// original file.
+fn skipped_include_from_directive(include: &erl_pp::IncludeDirective) -> Option<SkippedInclude> {
+    let directive = span_in_original_file(&include.parent_origin, include.directive_span)?;
+    let is_lib = matches!(include.kind, erl_pp::IncludeKind::IncludeLib);
+    let name = if is_lib { "include_lib" } else { "include" };
+    name_span_after_hyphen(directive, name).map(|name_span| SkippedInclude {
+        name_span,
+        is_lib,
+    })
+}
+
+/// Maps a consumed `-define` to its attribute-name span in the original file.
+fn skipped_define_from_definition(definition: &erl_pp::MacroDefinition) -> Option<SkippedDefine> {
+    let directive = span_in_original_file(&definition.origin, definition.directive_span)?;
+    name_span_after_hyphen(directive, "define").map(|name_span| SkippedDefine { name_span })
+}
+
+fn name_span_after_hyphen(directive: Span, name: &str) -> Option<Span> {
+    // Directives are written `-Name(...)`; the name starts one byte after `-`.
+    let name_start = directive.start.checked_add(1)?;
+    let name_end = name_start.checked_add(name.len())?;
+    if name_end > directive.end {
+        return None;
+    }
+    Some(Span::new(name_start, name_end))
 }
 
 /// Atom spliced in for an unknown macro so the file still parses.
@@ -415,6 +500,12 @@ mod tests {
         assert!(branch.tree.diagnostics().is_empty());
         // The include directive is consumed by the preprocessor, so only `-module` remains.
         assert_eq!(branch.tree.roots().count(), 1);
+        assert_eq!(branch.skipped_includes.len(), 1);
+        assert!(!branch.skipped_includes[0].is_lib);
+        assert_eq!(
+            branch.skipped_includes[0].name_span.text(&ctx.text),
+            "include"
+        );
     }
 
     #[test]
