@@ -30,7 +30,10 @@ other branches are kept.
 `-include` / `-include_lib` are **not** followed to the filesystem. elint
 keeps no search-path configuration (`-I`, `ERL_LIBS`, ...), so headers are
 skipped entirely. Macros, records, and types defined in headers are never
-seen and are not incorporated into the analysis.
+seen and are not incorporated into the analysis. The skipped directive sites
+themselves are retained on each branch so rules that care about attribute
+placement can still see them. Likewise, `-define` directives are consumed
+when macros are registered; those sites are retained the same way.
 
 ## Unknown macros expand to `elint_dummy`
 

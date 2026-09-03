@@ -10,7 +10,7 @@ pub mod fs;
 pub mod rules;
 mod span;
 
-pub use context::{BranchContext, Context, PreprocessDiagnostic};
+pub use context::{BranchContext, Context, PreprocessDiagnostic, SkippedDefine, SkippedInclude};
 pub use error::Error;
 pub use span::{Finding, Span};
 

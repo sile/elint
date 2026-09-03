@@ -1,5 +1,6 @@
 //! Lint rules.
 
+mod attr_order;
 mod case_over_if;
 mod deep_case_nesting;
 mod element_bif;
@@ -42,6 +43,7 @@ impl Rule {
 
 /// Registered lint rules.
 pub const RULES: &[Rule] = &[
+    attr_order::RULE,
     case_over_if::RULE,
     deep_case_nesting::RULE,
     element_bif::RULE,
