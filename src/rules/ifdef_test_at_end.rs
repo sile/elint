@@ -49,20 +49,17 @@ fn is_mainline(ctx: &Context, branch: &BranchContext) -> bool {
 struct TestBlock {
     span: Span,
     endif_end: Option<usize>,
-    has_else_or_elif: bool,
 }
 
 impl TestBlock {
-    /// A trailing then-arm: no `-else` / `-elif` on this directive, and no
-    /// lexical token after its `-endif.`.
+    /// A trailing block has no lexical token after its `-endif.`.
     fn is_allowed_tail(&self, lexical: &[erl_tokenize::Token]) -> bool {
         let Some(endif_end) = self.endif_end else {
             return false;
         };
-        !self.has_else_or_elif
-            && lexical
-                .iter()
-                .all(|token| token.start().offset() < endif_end)
+        lexical
+            .iter()
+            .all(|token| token.start().offset() < endif_end)
     }
 }
 
@@ -89,28 +86,14 @@ fn test_blocks(text: &str, lexical: &[erl_tokenize::Token]) -> Vec<TestBlock> {
 
         match kind {
             DirectiveKind::IfdefTest { span } => {
-                stack.push(CondFrame::Test {
-                    span,
-                    has_else_or_elif: false,
-                });
+                stack.push(CondFrame::Test { span });
             }
             DirectiveKind::OpenOther => stack.push(CondFrame::Other),
-            DirectiveKind::Else | DirectiveKind::Elif => {
-                if let Some(CondFrame::Test {
-                    has_else_or_elif, ..
-                }) = stack.last_mut()
-                {
-                    *has_else_or_elif = true;
-                }
-            }
+            DirectiveKind::OtherArm => {}
             DirectiveKind::Endif => match stack.pop() {
-                Some(CondFrame::Test {
-                    span,
-                    has_else_or_elif,
-                }) => blocks.push(TestBlock {
+                Some(CondFrame::Test { span }) => blocks.push(TestBlock {
                     span,
                     endif_end: Some(directive_end),
-                    has_else_or_elif,
                 }),
                 Some(CondFrame::Other) | None => {}
             },
@@ -119,15 +102,10 @@ fn test_blocks(text: &str, lexical: &[erl_tokenize::Token]) -> Vec<TestBlock> {
     }
 
     while let Some(frame) = stack.pop() {
-        if let CondFrame::Test {
-            span,
-            has_else_or_elif,
-        } = frame
-        {
+        if let CondFrame::Test { span } = frame {
             blocks.push(TestBlock {
                 span,
                 endif_end: None,
-                has_else_or_elif,
             });
         }
     }
@@ -137,7 +115,7 @@ fn test_blocks(text: &str, lexical: &[erl_tokenize::Token]) -> Vec<TestBlock> {
 
 #[derive(Debug)]
 enum CondFrame {
-    Test { span: Span, has_else_or_elif: bool },
+    Test { span: Span },
     Other,
 }
 
@@ -145,8 +123,7 @@ enum CondFrame {
 enum DirectiveKind {
     IfdefTest { span: Span },
     OpenOther,
-    Else,
-    Elif,
+    OtherArm,
     Endif,
 }
 
@@ -164,7 +141,7 @@ fn parse_directive_kind(
     };
 
     match name {
-        "else" => bare_directive(tokens, name_idx, DirectiveKind::Else),
+        "else" => bare_directive(tokens, name_idx, DirectiveKind::OtherArm),
         "endif" => bare_directive(tokens, name_idx, DirectiveKind::Endif),
         "ifdef" | "ifndef" => parse_named_conditional(text, tokens, hyphen_idx, name_idx, name),
         "if" => {
@@ -173,7 +150,7 @@ fn parse_directive_kind(
         }
         "elif" => {
             let dot_idx = consume_through_dot(tokens, name_idx + 1)?;
-            Some((DirectiveKind::Elif, dot_idx))
+            Some((DirectiveKind::OtherArm, dot_idx))
         }
         _ => None,
     }
@@ -342,9 +319,8 @@ f() ->
     ok.
 
 -ifdef(TEST).
--export([unix_time/1]).
-unix_time(_) ->
-    0.
+f_test() ->
+    ok.
 -endif.
 % trailing
 ";
@@ -369,9 +345,9 @@ g() ->
     fn flags_block_before_a_later_form() {
         let src = "\
 -module(t).
--export([f/0]).
 -ifdef(TEST).
--export([unix_time/1]).
+f_test() ->
+    ok.
 -endif.
 f() ->
     ok.
@@ -421,7 +397,7 @@ c() ->
     }
 
     #[test]
-    fn flags_trailing_block_that_has_else() {
+    fn accepts_trailing_block_that_has_else() {
         let src = "\
 -module(t).
 f() ->
@@ -434,7 +410,24 @@ b() ->
     ok.
 -endif.
 ";
-        assert_eq!(findings(check, src), ["-ifdef(TEST)"]);
+        assert!(findings(check, src).is_empty());
+    }
+
+    #[test]
+    fn accepts_trailing_block_that_has_elif() {
+        let src = "\
+-module(t).
+f() ->
+    ok.
+-ifdef(TEST).
+a() ->
+    ok.
+-elif(true).
+b() ->
+    ok.
+-endif.
+";
+        assert!(findings(check, src).is_empty());
     }
 
     #[test]

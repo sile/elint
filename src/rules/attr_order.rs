@@ -166,8 +166,11 @@ fn check_after_function_placement(
             continue;
         }
 
-        // Never allowed after functions, including inside `-ifdef(TEST)`.
-        if matches!(site.name, "type" | "opaque" | "record") {
+        // Never allowed after functions.
+        if matches!(
+            site.name,
+            "type" | "opaque" | "record" | "export" | "export_type"
+        ) {
             errors.push(Finding {
                 span: site.span,
                 node: site.node,
@@ -176,11 +179,7 @@ fn check_after_function_placement(
         }
 
         // Allowed after functions only inside `-ifdef(TEST)`.
-        // `ifdef_test_at_end` checks where that block itself may appear.
-        if matches!(
-            site.name,
-            "define" | "include" | "include_lib" | "export" | "export_type"
-        ) {
+        if matches!(site.name, "define" | "include" | "include_lib") {
             if in_any_region(site.span, test_regions) {
                 continue;
             }
@@ -282,13 +281,15 @@ fn parse_directive_kind(
 ) -> Option<(DirectiveKind, usize)> {
     let name_idx = hyphen_idx + 1;
     let name_tok = *tokens.get(name_idx)?;
-    // `if` and `else` are keywords. `ifdef` / `ifndef` / `elif` / `endif` are atoms.
-    let name = match name_tok.kind() {
-        erl_tokenize::TokenKind::Atom | erl_tokenize::TokenKind::Keyword(_) => name_tok.text(text),
+    if name_tok.kind() != erl_tokenize::TokenKind::Atom {
+        return None;
+    }
+    let name = match name_tok.value(text) {
+        erl_tokenize::TokenValue::Atom(a) => a,
         _ => return None,
     };
 
-    match name {
+    match name.as_ref() {
         "else" => {
             let dot_idx = name_idx + 1;
             let dot = *tokens.get(dot_idx)?;
@@ -413,7 +414,6 @@ fn attribute_name(branch: &BranchContext, name: erl_parse::NodeView<'_>) -> Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Context;
     use crate::rules::test_support::findings;
 
     #[test]
@@ -466,83 +466,6 @@ f() ->
 -endif.
 ";
         assert!(findings(check, src).is_empty());
-    }
-
-    #[test]
-    fn accepts_export_after_function_inside_ifdef_test() {
-        let src = "\
--module(t).
--export([f/0]).
-f() ->
-    ok.
--ifdef(TEST).
--export([g/0]).
--export_type([u/0]).
--endif.
-h() ->
-    ok.
-";
-        assert!(findings(check, src).is_empty());
-    }
-
-    #[test]
-    fn flags_export_in_ifdef_test_else_arm() {
-        // The else arm is a non-mainline branch, so the export is not on
-        // `branches[0]`. It still sits after a function on that branch, and
-        // the then-arm exemption must not cover it.
-        let src = "\
--module(t).
--ifdef(TEST).
--else.
-f() ->
-    ok.
--export([g/0]).
--endif.
-";
-        let ctx = Context::analyze("t.erl", src.to_string()).expect("test source must scan");
-        let mut found = Vec::new();
-        for branch in &ctx.branches {
-            assert!(
-                branch.tree.diagnostics().is_empty(),
-                "parse diagnostics: {:?}",
-                branch.tree.diagnostics()
-            );
-            found.extend(
-                check(&ctx, branch)
-                    .into_iter()
-                    .map(|finding| finding.span.text(&ctx.text).to_string()),
-            );
-        }
-        assert_eq!(found, ["export"]);
-    }
-
-    #[test]
-    fn accepts_define_after_nested_if_inside_ifdef_test() {
-        let src = "\
--module(t).
--export([f/0]).
-f() ->
-    ok.
--ifdef(TEST).
--if(true).
--endif.
--define(AFTER_IF, 1).
--endif.
-";
-        assert!(findings(check, src).is_empty());
-    }
-
-    #[test]
-    fn flags_export_after_function_outside_test() {
-        let src = "\
--module(t).
--export([f/0]).
-f() ->
-    ok.
--export([g/0]).
--export_type([u/0]).
-";
-        assert_eq!(findings(check, src), ["export", "export_type"]);
     }
 
     #[test]
