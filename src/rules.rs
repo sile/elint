@@ -4,6 +4,7 @@ mod attr_order;
 mod case_over_if;
 mod deep_case_nesting;
 mod element_bif;
+mod ifdef_test_at_end;
 mod newline_after_arrow;
 mod strict_generator;
 
@@ -47,6 +48,7 @@ pub const RULES: &[Rule] = &[
     case_over_if::RULE,
     deep_case_nesting::RULE,
     element_bif::RULE,
+    ifdef_test_at_end::RULE,
     newline_after_arrow::RULE,
     strict_generator::RULE,
 ];
