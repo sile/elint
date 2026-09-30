@@ -18,19 +18,17 @@ This rule reports two kinds of violations:
    `-export` after `-include`, or `-include` after `-type`).
 
 2. **Placement after functions.** After the first function clause:
-   - `-type` / `-opaque` / `-record` are always reported
-   - `-export` / `-export_type` / `-define` / `-include` / `-include_lib` are
-     reported unless they lie inside an `-ifdef(TEST).` ... `-endif.` then-arm
-     (up to a possible `-else`)
+   - `-type` / `-opaque` / `-record` / `-export` / `-export_type` are always
+     reported
+   - `-define` / `-include` / `-include_lib` are reported unless they lie inside
+     an `-ifdef(TEST).` ... `-endif.` then-arm (up to a possible `-else`)
 
 It does not report:
 
 - `-spec` / `-callback` next to functions
 - Unclassified attributes such as `-compile`, `-doc`, or `-elint_expect`
 - Relative order among `-record`, `-type`, `-opaque`, and `-define`
-- `-export` / `-export_type` / `-define` / `-include` / `-include_lib` inside
-  `-ifdef(TEST)` after functions. Where that `-ifdef(TEST)` may appear is
-  `ifdef_test_at_end`
+- `-define` / `-include` / `-include_lib` inside `-ifdef(TEST)` after functions
 
 `-include` / `-include_lib` are skipped by preprocessing and do not remain in
 the parse tree. This rule recovers those directive sites from the preprocessor
@@ -41,8 +39,8 @@ so their order and placement can still be checked.
 Module headers are easiest to read when exports, includes, and type-level
 declarations stay at the top in a stable order. Attributes that sit between
 function clauses split the module's surface and make the header an incomplete
-summary. Test-only exports, macros, and eunit includes conventionally live
-under `-ifdef(TEST)`, so that placement remains allowed.
+summary. Test-only macros and eunit includes conventionally live under
+`-ifdef(TEST)`, so that placement remains allowed.
 
 ## Example
 
@@ -74,7 +72,6 @@ f() ->
     ok.
 
 -ifdef(TEST).
--export([unix_time/1]).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 ```

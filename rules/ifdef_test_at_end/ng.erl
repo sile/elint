@@ -1,9 +1,7 @@
 -module(ng).
 
--export([f/0]).
-
 -ifdef(TEST).
--export([unix_time/1]).
+-export([f/0]).
 -endif.
 
 

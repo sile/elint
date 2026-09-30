@@ -25,7 +25,6 @@ f(Value) ->
 
 
 -ifdef(TEST).
--export([test_only/0]).
 -define(TEST_ONLY, 1).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
